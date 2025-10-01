@@ -8,10 +8,10 @@
 		"Developer"
 	],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"homepage": "https://modrinth.com/mod/cold-breath",
+		"sources": "https://github.com/sfDesat/cold-breath"
 	},
-	"license": "CC0-1.0",
+	"license": "MIT",
 	"icon": "assets/coldbreath/icon.png",
 	"environment": "*",
 	"entrypoints": {
@@ -27,8 +27,8 @@
 	},
 	"mixins": [],
 	"depends": {
-		"fabricloader": ">=0.17.2",
-		"minecraft": "~1.21.8",
+		"fabricloader": ">=0.17.0",
+		"minecraft": ">=1.21.1 <1.22",
 		"java": ">=21",
 		"fabric-api": "*"
 	},
