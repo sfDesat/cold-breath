@@ -87,18 +87,29 @@ public final class ColdBreathEffect {
             int seaLevel = world.getSeaLevel();
             boolean isColdHere = biome.isCold(pos, seaLevel);
 
-            // Dimension visibility gating
+            // Dimension visibility gating with priority over cold biome check
             String dimKey = world.getRegistryKey().getValue().toString();
             boolean isNether = dimKey.contains("nether");
             boolean isEnd = dimKey.contains("the_end") || dimKey.contains("end");
-            if ((isNether && !cfg.visibleInNether) || (isEnd && !cfg.visibleInEnd)) {
-                scheduleNext(time, cfg);
-                return;
-            }
 
-            if (cfg.onlyInColdBiomes && !isColdHere) {
-                scheduleNext(time, cfg);
-                return;
+            if (isNether) {
+                if (!cfg.visibleInNether) {
+                    scheduleNext(time, cfg);
+                    return;
+                }
+                // In Nether and visibleInNether enabled -> allow regardless of cold biome
+            } else if (isEnd) {
+                if (!cfg.visibleInEnd) {
+                    scheduleNext(time, cfg);
+                    return;
+                }
+                // In End and visibleInEnd enabled -> allow regardless of cold biome
+            } else {
+                // Overworld/other dimensions -> apply cold biome rule if configured
+                if (cfg.onlyInColdBiomes && !isColdHere) {
+                    scheduleNext(time, cfg);
+                    return;
+                }
             }
 
             startBreathBurst(time, cfg);
@@ -124,8 +135,60 @@ public final class ColdBreathEffect {
                 // Blend numbers next to rectangle
                 String blendText = String.format("blend: %.2f -> %.2f", prevSprintBlend, sprintBlend);
                 context.drawText(client.textRenderer, Text.literal(blendText), x + w + 6, y + 2, 0xFFFFFF00, false);
+
+				// Dimension indicator below the bar
+				String dimLabel = "dim: unknown";
+				if (client.world != null) {
+					String dimKey = client.world.getRegistryKey().getValue().toString();
+					boolean isNether = dimKey.contains("nether");
+					boolean isEnd = dimKey.contains("the_end") || dimKey.contains("end");
+					String friendly = isNether ? "nether" : (isEnd ? "end" : "overworld/other");
+					dimLabel = String.format("dim: %s (%s)", friendly, dimKey);
+				}
+				context.drawText(client.textRenderer, Text.literal(dimLabel), x + 3, y + h + 2, 0xFFFFFFFF, false);
+
+
+				// Eligibility indicator (whether effect could play now, ignoring timing RNG)
+				String eligLabel = "effect: unknown";
+				if (client.world != null && client.player != null) {
+					String stateVal = getBreathEligibilityDisplay(client.world, client.player, cfg);
+					eligLabel = "effect: " + stateVal;
+				}
+				context.drawText(client.textRenderer, Text.literal(eligLabel), x + 3, y + h + 14, 0xFFFFFFFF, false);
             }
         });
+
+	}
+
+
+	private static String getBreathEligibilityDisplay(ClientWorld world, PlayerEntity player, ColdBreathConfig cfg) {
+		if (!cfg.enabled) return "false (disabled)";
+		if (player.isSpectator() || player.isSleeping()) return "false (spectator/sleeping)";
+		if (!cfg.visibleInCreative && player.getAbilities().creativeMode) return "false (creative hidden)";
+
+		// Underwater path
+		if (player.isSubmergedInWater()) {
+			return cfg.underwaterEnabled ? "bubbles" : "false (underwater disabled)";
+		}
+
+		// Dimension logic with priority over cold biome check
+		String dimKey = world.getRegistryKey().getValue().toString();
+		boolean isNether = dimKey.contains("nether");
+		boolean isEnd = dimKey.contains("the_end") || dimKey.contains("end");
+		if (isNether) {
+			return cfg.visibleInNether ? "true" : "false (nether hidden)";
+		}
+		if (isEnd) {
+			return cfg.visibleInEnd ? "true" : "false (end hidden)";
+		}
+
+		// Overworld/other -> apply cold biome rule
+		BlockPos pos = player.getBlockPos();
+		Biome biome = world.getBiome(pos).value();
+		int seaLevel = world.getSeaLevel();
+		boolean isColdHere = biome.isCold(pos, seaLevel);
+		if (cfg.onlyInColdBiomes && !isColdHere) return "false (not cold biome)";
+		return "true";
     }
 
     private static void startBreathBurst(long currentTick, ColdBreathConfig cfg) {

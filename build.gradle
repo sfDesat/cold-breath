@@ -48,8 +48,7 @@ dependencies {
 
     // ModMenu for config screen access
     modCompileOnly "com.terraformersmc:modmenu:11.0.3"
-    // Temporarily disabled for local runtime - ModMenu doesn't support 1.21.9 yet
-    // modLocalRuntime "com.terraformersmc:modmenu:11.0.3"
+    modLocalRuntime "com.terraformersmc:modmenu:15.0.0"
 }
 
 processResources {
