@@ -60,6 +60,17 @@ public final class ColdBreathEffect {
 
             if (time < nextBreathTick) return;
 
+            // Common checks that apply to all modes
+            if (player.isSpectator() || player.isSleeping()) {
+                scheduleNext(time, cfg);
+                return;
+            }
+
+            if (!cfg.visibleInCreative && player.getAbilities().creativeMode) {
+                scheduleNext(time, cfg);
+                return;
+            }
+
             // Underwater path (overrides sprinting logic)
             if (player.isSubmergedInWater()) {
                 if (!cfg.underwaterEnabled) {
@@ -68,16 +79,6 @@ public final class ColdBreathEffect {
                 }
                 startBreathBurst(time, cfg);
                 scheduleNextUnderwater(time, cfg);
-                return;
-            }
-
-            if (player.isSpectator() || player.isSleeping()) {
-                scheduleNext(time, cfg);
-                return;
-            }
-
-            if (!cfg.visibleInCreative && player.getAbilities().creativeMode) {
-                scheduleNext(time, cfg);
                 return;
             }
 
