@@ -10,6 +10,7 @@ Adds a breath effects that adapt to your environment and movement. Giving you a 
 * Breathing speed changes when sprinting
 * Realisitic breathing intervals
 * Per dimension support (Nether default off, End default on)
+* Breath effect at higher altitudes
 
 ****
 
@@ -19,7 +20,6 @@ Adds a breath effects that adapt to your environment and movement. Giving you a 
 ****
 #### Planned features:  
 - Night and morning effect
-- Altitude effect
 - Heat source effect (lava, campfire etc)
 - Status effect integration (fire resistance, slowness etc)
 - Health state
