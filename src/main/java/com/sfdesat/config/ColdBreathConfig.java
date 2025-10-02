@@ -3,7 +3,7 @@ package com.sfdesat.config;
 public class ColdBreathConfig {
 	public boolean enabled = true;
 	public boolean visibleInCreative = false; // show effect in creative when true
-	public boolean onlyInColdBiomes = true; // only show in cold biomes by default
+	public boolean onlyInColdBiomes = true; // only show in areas with temperature <= 0.15f by default
     public boolean visibleInNether = false; // show effect in Nether when true
     public boolean visibleInEnd = true; // show effect in End when true
 	// Seconds-based settings (with 0.1s precision via UI sliders)
@@ -31,6 +31,8 @@ public class ColdBreathConfig {
 	public boolean underwaterEnabled = true; // enable underwater breaths
 	public double underwaterBaseIntervalSeconds = 8.0;
 	public double underwaterIntervalDeviationSeconds = 1.0;
+
+	// Altitude settings
+	public boolean altitudeAdjustmentEnabled = true; // enable altitude-based temperature adjustment
+	public double altitudeTemperatureRate = 0.00125; // temperature decrease per block above sea level
 }
-
-

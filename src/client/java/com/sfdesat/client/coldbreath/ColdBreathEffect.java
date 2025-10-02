@@ -19,7 +19,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Spawns a small "breath" puff in front of the player at random intervals,
- * client-side only, and only in cold biomes.
+ * client-side only, and only in areas with temperature <= 0.15f.
  */
 public final class ColdBreathEffect {
 
@@ -30,6 +30,7 @@ public final class ColdBreathEffect {
 
     private ColdBreathEffect() { }
 
+    @SuppressWarnings("deprecation")
     public static void register() {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             ColdBreathConfig cfg = ConfigManager.get();
@@ -84,8 +85,17 @@ public final class ColdBreathEffect {
 
             BlockPos pos = player.getBlockPos();
             Biome biome = world.getBiome(pos).value();
-            int seaLevel = world.getSeaLevel();
-            boolean isColdHere = biome.isCold(pos, seaLevel);
+            float baseTemperature = biome.getTemperature();
+            float temperature = baseTemperature;
+            
+            // Apply altitude adjustment if enabled
+            if (cfg.altitudeAdjustmentEnabled) {
+                int seaLevel = world.getSeaLevel();
+                int altitude = pos.getY();
+                temperature = baseTemperature - (altitude - seaLevel) * (float)cfg.altitudeTemperatureRate;
+            }
+            
+            boolean isColdHere = temperature <= 0.15f;
 
             // Dimension visibility gating with priority over cold biome check
             String dimKey = world.getRegistryKey().getValue().toString();
@@ -155,6 +165,28 @@ public final class ColdBreathEffect {
 					eligLabel = "effect: " + stateVal;
 				}
 				context.drawText(client.textRenderer, Text.literal(eligLabel), x + 3, y + h + 14, 0xFFFFFFFF, false);
+
+				// Temperature indicator
+				String tempLabel = "temp: unknown";
+				if (client.world != null && client.player != null) {
+					BlockPos pos = client.player.getBlockPos();
+					Biome biome = client.world.getBiome(pos).value();
+					float baseTemperature = biome.getTemperature();
+					float temperature = baseTemperature;
+					
+					// Apply altitude adjustment if enabled
+					if (cfg.altitudeAdjustmentEnabled) {
+						int seaLevel = client.world.getSeaLevel();
+						int altitude = pos.getY();
+						temperature = baseTemperature - (altitude - seaLevel) * (float)cfg.altitudeTemperatureRate;
+						tempLabel = String.format("temp: %.3f (base: %.3f, alt: %d, rate: %.5f)", 
+							temperature, baseTemperature, altitude, cfg.altitudeTemperatureRate);
+					} else {
+						tempLabel = String.format("temp: %.3f (base: %.3f, alt: disabled)", 
+							temperature, baseTemperature);
+					}
+				}
+				context.drawText(client.textRenderer, Text.literal(tempLabel), x + 3, y + h + 26, 0xFFFFFFFF, false);
             }
         });
 
@@ -182,12 +214,21 @@ public final class ColdBreathEffect {
 			return cfg.visibleInEnd ? "true" : "false (end hidden)";
 		}
 
-		// Overworld/other -> apply cold biome rule
+		// Overworld/other -> apply cold temperature rule
 		BlockPos pos = player.getBlockPos();
 		Biome biome = world.getBiome(pos).value();
-		int seaLevel = world.getSeaLevel();
-		boolean isColdHere = biome.isCold(pos, seaLevel);
-		if (cfg.onlyInColdBiomes && !isColdHere) return "false (not cold biome)";
+		float baseTemperature = biome.getTemperature();
+		float temperature = baseTemperature;
+		
+		// Apply altitude adjustment if enabled
+		if (cfg.altitudeAdjustmentEnabled) {
+			int seaLevel = world.getSeaLevel();
+			int altitude = pos.getY();
+			temperature = baseTemperature - (altitude - seaLevel) * (float)cfg.altitudeTemperatureRate;
+		}
+		
+		boolean isColdHere = temperature <= 0.15f;
+		if (cfg.onlyInColdBiomes && !isColdHere) return "false (temp: " + String.format("%.3f", temperature) + ")";
 		return "true";
     }
 
