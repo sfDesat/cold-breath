@@ -19,7 +19,9 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Spawns a small "breath" puff in front of the player at random intervals,
- * client-side only, and only in areas with temperature <= 0.15f.
+ * client-side only, and in areas with temperature <= configured threshold.
+ * Also shows morning breath between 23000-2000 ticks for temperatures between
+ * the always-breath threshold and max morning breath temperature.
  */
 public final class ColdBreathEffect {
 
@@ -41,6 +43,7 @@ public final class ColdBreathEffect {
             if (world == null || player == null) return;
 
             long time = world.getTime();
+            long dayTime = world.getTimeOfDay() % 24000;
 
             // Update sprint blending EVERY tick so HUD reflects state immediately
             prevSprintBlend = sprintBlend;
@@ -95,7 +98,7 @@ public final class ColdBreathEffect {
                 temperature = baseTemperature - (altitude - seaLevel) * (float)cfg.altitudeTemperatureRate;
             }
             
-            boolean isColdHere = temperature <= 0.15f;
+            boolean isColdHere = temperature <= cfg.alwaysBreathTemperature;
 
             // Dimension visibility gating with priority over cold biome check
             String dimKey = world.getRegistryKey().getValue().toString();
@@ -116,9 +119,19 @@ public final class ColdBreathEffect {
                 // In End and visibleInEnd enabled -> allow regardless of cold biome
             } else {
                 // Overworld/other dimensions -> apply cold biome rule if configured
-                if (cfg.onlyInColdBiomes && !isColdHere) {
-                    scheduleNext(time, cfg);
-                    return;
+                if (cfg.onlyInColdBiomes) {
+                    // Check for morning breath if enabled
+                    boolean isMorningBreathActive = false;
+                    if (cfg.morningBreathEnabled) {
+                        boolean isMorningTime = dayTime >= cfg.morningBreathStartTick || dayTime <= cfg.morningBreathEndTick;
+                        boolean isMorningBreathTemp = temperature > cfg.alwaysBreathTemperature && temperature <= cfg.maxMorningBreathTemperature;
+                        isMorningBreathActive = isMorningTime && isMorningBreathTemp;
+                    }
+                    
+                    if (!isColdHere && !isMorningBreathActive) {
+                        scheduleNext(time, cfg);
+                        return;
+                    }
                 }
             }
 
@@ -187,6 +200,37 @@ public final class ColdBreathEffect {
 					}
 				}
 				context.drawText(client.textRenderer, Text.literal(tempLabel), x + 3, y + h + 26, 0xFFFFFFFF, false);
+
+				// Morning breath debug info
+				if (client.world != null) {
+					long dayTime = client.world.getTimeOfDay() % 24000;
+					String timeLabel = String.format("time: %d", dayTime);
+					context.drawText(client.textRenderer, Text.literal(timeLabel), x + 3, y + h + 38, 0xFFFFFFFF, false);
+
+					if (cfg.morningBreathEnabled && client.player != null) {
+						boolean isMorningTime = dayTime >= cfg.morningBreathStartTick || dayTime <= cfg.morningBreathEndTick;
+						BlockPos pos = client.player.getBlockPos();
+						Biome biome = client.world.getBiome(pos).value();
+						float baseTemperature = biome.getTemperature();
+						float temperature = baseTemperature;
+						
+						// Apply altitude adjustment if enabled
+						if (cfg.altitudeAdjustmentEnabled) {
+							int seaLevel = client.world.getSeaLevel();
+							int altitude = pos.getY();
+							temperature = baseTemperature - (altitude - seaLevel) * (float)cfg.altitudeTemperatureRate;
+						}
+
+						boolean isMorningBreathTemp = temperature > cfg.alwaysBreathTemperature && temperature <= cfg.maxMorningBreathTemperature;
+						boolean isMorningBreathActive = isMorningTime && isMorningBreathTemp;
+						
+						String morningBreathLabel = String.format("morning breath: %s (%d-%d)", 
+							isMorningBreathActive ? "active" : "inactive",
+							cfg.morningBreathStartTick, cfg.morningBreathEndTick);
+						int activeColor = isMorningBreathActive ? 0xFF00FF00 : 0xFFFF0000; // Green if active, red if not
+						context.drawText(client.textRenderer, Text.literal(morningBreathLabel), x + 3, y + h + 50, activeColor, false);
+					}
+				}
             }
         });
 
@@ -227,8 +271,22 @@ public final class ColdBreathEffect {
 			temperature = baseTemperature - (altitude - seaLevel) * (float)cfg.altitudeTemperatureRate;
 		}
 		
-		boolean isColdHere = temperature <= 0.15f;
-		if (cfg.onlyInColdBiomes && !isColdHere) return "false (temp: " + String.format("%.3f", temperature) + ")";
+		boolean isColdHere = temperature <= cfg.alwaysBreathTemperature;
+		if (cfg.onlyInColdBiomes) {
+			if (!isColdHere) {
+				// Check for morning breath if enabled
+				if (cfg.morningBreathEnabled) {
+					long dayTime = world.getTimeOfDay() % 24000;
+					boolean isMorningTime = dayTime >= cfg.morningBreathStartTick || dayTime <= cfg.morningBreathEndTick;
+					boolean isMorningBreathTemp = temperature > cfg.alwaysBreathTemperature && temperature <= cfg.maxMorningBreathTemperature;
+					
+					if (isMorningTime && isMorningBreathTemp) {
+						return "true (morning breath)";
+					}
+				}
+				return "false (temp: " + String.format("%.3f", temperature) + ")";
+			}
+		}
 		return "true";
     }
 

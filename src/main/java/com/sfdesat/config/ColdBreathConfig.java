@@ -35,4 +35,13 @@ public class ColdBreathConfig {
 	// Altitude settings
 	public boolean altitudeAdjustmentEnabled = true; // enable altitude-based temperature adjustment
 	public double altitudeTemperatureRate = 0.00125; // temperature decrease per block above sea level
+
+	// Morning breath settings
+	public boolean morningBreathEnabled = true; // enable morning breath during specific time window
+	public long morningBreathStartTick = 22500; // start of morning breath time window (in ticks)
+	public long morningBreathEndTick = 1500; // end of morning breath time window (in ticks)
+	public double maxMorningBreathTemperature = 0.7; // maximum temperature for morning breath
+
+	// Always breath temperature setting
+	public double alwaysBreathTemperature = 0.15; // temperature threshold where breath always appears
 }

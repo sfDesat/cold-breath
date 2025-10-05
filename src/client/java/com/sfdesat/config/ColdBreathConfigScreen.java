@@ -34,8 +34,10 @@ public final class ColdBreathConfigScreen {
         var onlyColdEntry = eb.startBooleanToggle(Text.literal("Only in Cold Temperatures"), cfg.onlyInColdBiomes)
                 .setDefaultValue(true)
                 .setTooltip(
-                        Text.literal("If enabled, breaths only appear where temperature <= 0.15f."),
-                        Text.literal("This includes high altitudes and cold biomes. Nether/End visibility is controlled below.")
+                        Text.literal("If enabled, breaths only appear in cold areas and during morning hours."),
+                        Text.literal("Cold areas: temperature <= Always Breath Temperature threshold."),
+                        Text.literal("Morning hours: configurable time window with morning breath settings."),
+                        Text.literal("Nether/End visibility is controlled below.")
                 )
                 .setSaveConsumer(v -> cfg.onlyInColdBiomes = v)
                 .build();
@@ -63,6 +65,21 @@ public final class ColdBreathConfigScreen {
                 .setSaveConsumer(i -> cfg.altitudeTemperatureRate = i / 100000.0)
                 .build();
 
+        var alwaysBreathTempEntry = eb.startIntSlider(
+                        Text.literal("Always Breath Temperature"),
+                        (int) Math.round(cfg.alwaysBreathTemperature * 1000), // Convert to int (0-1000 range)
+                        0, 1000 // 0.000–1.000
+                )
+                .setDefaultValue(150) // 0.15
+                .setTextGetter(i -> Text.literal(String.format("%.3f", i / 1000.0)))
+                .setTooltip(
+                        Text.literal("Temperature threshold where breath always appears (0.000–1.000)."),
+                        Text.literal("Default 0.15 - breath will always show in cold biomes below this temperature.")
+                )
+                .setSaveConsumer(i -> cfg.alwaysBreathTemperature = i / 1000.0)
+                .build();
+
+
         var baseIntervalEntry = eb.startIntSlider(
                         Text.literal("Base Interval (seconds)"),
                         (int) Math.round(cfg.baseIntervalSeconds * 10),
@@ -89,6 +106,7 @@ public final class ColdBreathConfigScreen {
         general.addEntry(onlyColdEntry);
         general.addEntry(altitudeToggleEntry);
         general.addEntry(altitudeRateEntry);
+        general.addEntry(alwaysBreathTempEntry);
         general.addEntry(baseIntervalEntry);
         general.addEntry(baseDevEntry);
 
@@ -153,6 +171,62 @@ public final class ColdBreathConfigScreen {
 
         AbstractConfigListEntry<?> sprintSub =
                 eb.startSubCategory(Text.literal("Sprinting"), sprintEntries).build();
+
+        // --- Morning Breath subcategory ---
+        var morningBreathToggleEntry = eb.startBooleanToggle(Text.literal("Enable Morning Breath"), cfg.morningBreathEnabled)
+                .setDefaultValue(true)
+                .setTooltip(
+                        Text.literal("Enable morning breath during early morning hours."),
+                        Text.literal("Breath will appear in moderate temperatures during the configured time window.")
+                )
+                .setSaveConsumer(v -> cfg.morningBreathEnabled = v)
+                .build();
+
+        var morningBreathStartEntry = eb.startLongField(Text.literal("Morning Breath Start (ticks)"), cfg.morningBreathStartTick)
+                .setDefaultValue(22500L)
+                .setMin(0L)
+                .setMax(23999L)
+                .setTooltip(
+                        Text.literal("Start of morning breath time window (0-23999 ticks)."),
+                        Text.literal("Default 22500 - breath starts appearing at this time.")
+                )
+                .setSaveConsumer(v -> cfg.morningBreathStartTick = v)
+                .build();
+
+        var morningBreathEndEntry = eb.startLongField(Text.literal("Morning Breath End (ticks)"), cfg.morningBreathEndTick)
+                .setDefaultValue(1500L)
+                .setMin(0L)
+                .setMax(23999L)
+                .setTooltip(
+                        Text.literal("End of morning breath time window (0-23999 ticks)."),
+                        Text.literal("Default 1500 - breath stops appearing at this time.")
+                )
+                .setSaveConsumer(v -> cfg.morningBreathEndTick = v)
+                .build();
+
+        var maxMorningBreathTempEntry = eb.startIntSlider(
+                        Text.literal("Max Morning Breath Temperature"),
+                        (int) Math.round(cfg.maxMorningBreathTemperature * 1000), // Convert to int (0-1000 range)
+                        0, 1000 // 0.000–1.000
+                )
+                .setDefaultValue(700) // 0.7
+                .setTextGetter(i -> Text.literal(String.format("%.3f", i / 1000.0)))
+                .setTooltip(
+                        Text.literal("Maximum temperature for morning breath (0.000–1.000)."),
+                        Text.literal("Default 0.7 - morning breath appears between always-breath temp and this value.")
+                )
+                .setSaveConsumer(i -> cfg.maxMorningBreathTemperature = i / 1000.0)
+                .build();
+
+        @SuppressWarnings({"rawtypes"})
+        List<AbstractConfigListEntry> morningBreathEntries = new ArrayList<>();
+        morningBreathEntries.add(morningBreathToggleEntry);
+        morningBreathEntries.add(morningBreathStartEntry);
+        morningBreathEntries.add(morningBreathEndEntry);
+        morningBreathEntries.add(maxMorningBreathTempEntry);
+
+        AbstractConfigListEntry<?> morningBreathSub =
+                eb.startSubCategory(Text.literal("Morning Breath"), morningBreathEntries).build();
 
         // --- Visuals subcategory ---
         var forwardEntry = eb.startDoubleField(Text.literal("Forward Offset"), cfg.forwardOffset)
@@ -287,6 +361,7 @@ public final class ColdBreathConfigScreen {
 
         // Attach subcategories in order
         general.addEntry(sprintSub);
+        general.addEntry(morningBreathSub);
         general.addEntry(underwaterSub);
         general.addEntry(visualsSub);
         general.addEntry(dimensionsSub);
