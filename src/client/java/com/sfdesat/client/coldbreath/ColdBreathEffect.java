@@ -17,18 +17,14 @@ import net.minecraft.world.biome.Biome;
 
 import java.util.concurrent.ThreadLocalRandom;
 
-/**
- * Spawns a small "breath" puff in front of the player at random intervals,
- * client-side only, and in areas with temperature <= configured threshold.
- * Also shows morning breath between 23000-2000 ticks for temperatures between
- * the always-breath threshold and max morning breath temperature.
- */
 public final class ColdBreathEffect {
 
     private static long nextBreathTick = 0;
     private static long breathBurstEndTick = 0;
     private static double sprintBlend = 0.0; // 0.0 normal, 1.0 sprinting
     private static double prevSprintBlend = 0.0;
+    private static double healthBlend = 0.0; // 0.0 full health, 1.0 low health
+    private static double prevHealthBlend = 0.0;
 
     private ColdBreathEffect() { }
 
@@ -45,9 +41,11 @@ public final class ColdBreathEffect {
             long time = world.getTime();
             long dayTime = world.getTimeOfDay() % 24000;
 
-            // Update sprint blending EVERY tick so HUD reflects state immediately
+            // Update sprint and health blending EVERY tick so HUD reflects state immediately
             prevSprintBlend = sprintBlend;
+            prevHealthBlend = healthBlend;
             updateSprintBlend(player, cfg);
+            updateHealthBlend(player, cfg);
 
             if (time < breathBurstEndTick) {
                 if (time % 3 == 0) {
@@ -156,7 +154,8 @@ public final class ColdBreathEffect {
             if (client != null && client.textRenderer != null) {
                 context.drawText(client.textRenderer, Text.literal(state), x + 3, y + 2, 0xFFFFFFFF, false);
                 // Blend numbers next to rectangle
-                String blendText = String.format("blend: %.2f -> %.2f", prevSprintBlend, sprintBlend);
+                String blendText = String.format("sprint: %.2f->%.2f health: %.2f->%.2f", 
+                    prevSprintBlend, sprintBlend, prevHealthBlend, healthBlend);
                 context.drawText(client.textRenderer, Text.literal(blendText), x + w + 6, y + 2, 0xFFFFFF00, false);
 
 				// Dimension indicator below the bar
@@ -229,6 +228,23 @@ public final class ColdBreathEffect {
 							cfg.morningBreathStartTick, cfg.morningBreathEndTick);
 						int activeColor = isMorningBreathActive ? 0xFF00FF00 : 0xFFFF0000; // Green if active, red if not
 						context.drawText(client.textRenderer, Text.literal(morningBreathLabel), x + 3, y + h + 50, activeColor, false);
+					}
+
+					// Show current breathing interval
+					if (client.player != null) {
+						double baseNormal = Math.max(0.1, cfg.baseIntervalSeconds);
+						double baseSprint = Math.max(0.1, cfg.sprintBaseIntervalSeconds);
+						double baseHealth = Math.max(0.1, cfg.lowHealthIntervalSeconds);
+						
+						double sprintBlendValue = (cfg.sprintingIntervalsEnabled ? sprintBlend : 0.0);
+						double healthBlendValue = (cfg.healthBasedBreathingEnabled ? healthBlend : 0.0);
+						
+						double baseAfterSprint = lerp(baseNormal, baseSprint, sprintBlendValue);
+						double baseAfterHealth = lerp(baseNormal, baseHealth, healthBlendValue);
+						double currentBase = Math.min(baseAfterSprint, baseAfterHealth);
+						
+						String intervalLabel = String.format("interval: %.1fs", currentBase);
+						context.drawText(client.textRenderer, Text.literal(intervalLabel), x + 3, y + h + 62, 0xFFFFFFFF, false);
 					}
 				}
             }
@@ -352,16 +368,29 @@ public final class ColdBreathEffect {
     }
 
     private static void scheduleNext(long nowTick, ColdBreathConfig cfg) {
-        // Determine blended intervals (normal <-> sprint) based on sprintBlend
+        // Determine intervals with health taking priority (use lowest interval)
         double baseNormal = Math.max(0.1, cfg.baseIntervalSeconds);
         double devNormal = Math.max(0.0, cfg.intervalDeviationSeconds);
 
         double baseSprint = Math.max(0.1, cfg.sprintBaseIntervalSeconds);
         double devSprint = Math.max(0.0, cfg.sprintIntervalDeviationSeconds);
 
-        double blend = (cfg.sprintingIntervalsEnabled ? sprintBlend : 0.0);
-        double base = lerp(baseNormal, baseSprint, blend);
-        double dev = lerp(devNormal, devSprint, blend);
+        double baseHealth = Math.max(0.1, cfg.lowHealthIntervalSeconds);
+        double devHealth = Math.max(0.0, cfg.healthIntervalDeviationSeconds); // Use health-specific deviation
+
+        // Calculate sprint-adjusted interval
+        double sprintBlendValue = (cfg.sprintingIntervalsEnabled ? sprintBlend : 0.0);
+        double baseAfterSprint = lerp(baseNormal, baseSprint, sprintBlendValue);
+        double devAfterSprint = lerp(devNormal, devSprint, sprintBlendValue);
+
+        // Calculate health-adjusted interval (deviation also scales with health)
+        double healthBlendValue = (cfg.healthBasedBreathingEnabled ? healthBlend : 0.0);
+        double baseAfterHealth = lerp(baseNormal, baseHealth, healthBlendValue);
+        double devAfterHealth = lerp(devNormal, devHealth, healthBlendValue);
+
+        // Use the LOWER interval (health takes priority when it's lower)
+        double base = Math.min(baseAfterSprint, baseAfterHealth);
+        double dev = (base == baseAfterSprint) ? devAfterSprint : devAfterHealth;
 
         double minSec = Math.max(0.1, base - dev);
         double maxSec = Math.max(minSec, base + dev);
@@ -410,16 +439,40 @@ public final class ColdBreathEffect {
         }
     }
 
+    private static void updateHealthBlend(PlayerEntity player, ColdBreathConfig cfg) {
+        if (!cfg.healthBasedBreathingEnabled) {
+            healthBlend = 0.0;
+            return;
+        }
+
+        // Calculate health percentage (0.0 = full health, 1.0 = 0 hearts)
+        float maxHealth = player.getMaxHealth();
+        float currentHealth = player.getHealth();
+        float healthPercentage = 1.0f - (currentHealth / maxHealth);
+        
+        // Add hysteresis to prevent flickering (only change if difference is significant)
+        double hysteresis = 0.02; // 2% threshold
+        double targetBlend = Math.max(0.0, Math.min(1.0, healthPercentage));
+        
+        // Only update if the change is significant enough
+        if (Math.abs(targetBlend - healthBlend) > hysteresis) {
+            // Smooth transition to avoid jarring changes
+            double dt = 1.0 / 20.0; // seconds per tick
+            double transitionRate = 1.5; // Slower transition to reduce flickering
+            
+            if (targetBlend > healthBlend) {
+                healthBlend = Math.min(1.0, healthBlend + dt * transitionRate);
+            } else if (targetBlend < healthBlend) {
+                healthBlend = Math.max(0.0, healthBlend - dt * transitionRate);
+            }
+        }
+    }
+
     private static double lerp(double a, double b, double t) {
         return a + (b - a) * t;
     }
 
     private static int getDebugColor(ColdBreathConfig cfg) {
-        // State colors (ARGB):
-        // Green: standing still/normal (blend ~0)
-        // Yellow: building up (blend increasing)
-        // Orange: full sprinting (blend ~1)
-        // Blue: building down (blend decreasing)
         int alpha = 0xA0 << 24; // ~63% opacity
         if (!cfg.sprintingIntervalsEnabled) {
             return alpha | 0x00FF00; // green
@@ -442,11 +495,35 @@ public final class ColdBreathEffect {
     }
 
     private static String getDebugState(ColdBreathConfig cfg) {
-        if (!cfg.sprintingIntervalsEnabled) return "normal";
-        if (sprintBlend >= 0.95) return "sprinting";
-        if (sprintBlend <= 0.05) return "normal";
-        if (sprintBlend > prevSprintBlend + 1e-6) return "building up";
-        if (sprintBlend < prevSprintBlend - 1e-6) return "building down";
-        return "transitional";
+        if (!cfg.sprintingIntervalsEnabled && !cfg.healthBasedBreathingEnabled) return "normal";
+        
+        // Calculate which interval is actually being used (priority system)
+        double baseNormal = Math.max(0.1, cfg.baseIntervalSeconds);
+        double baseSprint = Math.max(0.1, cfg.sprintBaseIntervalSeconds);
+        double baseHealth = Math.max(0.1, cfg.lowHealthIntervalSeconds);
+        
+        double sprintBlendValue = (cfg.sprintingIntervalsEnabled ? sprintBlend : 0.0);
+        double healthBlendValue = (cfg.healthBasedBreathingEnabled ? healthBlend : 0.0);
+        
+        double baseAfterSprint = lerp(baseNormal, baseSprint, sprintBlendValue);
+        double baseAfterHealth = lerp(baseNormal, baseHealth, healthBlendValue);
+        
+        // Determine which system is controlling the breathing
+        boolean healthControlling = cfg.healthBasedBreathingEnabled && baseAfterHealth <= baseAfterSprint;
+        boolean sprintControlling = cfg.sprintingIntervalsEnabled && baseAfterSprint < baseAfterHealth;
+        
+        if (healthControlling) {
+            if (healthBlend >= 0.7) return "critical health";
+            if (healthBlend >= 0.3) return "low health";
+            return "health priority";
+        } else if (sprintControlling) {
+            if (sprintBlend >= 0.95) return "sprinting";
+            if (sprintBlend <= 0.05) return "normal";
+            if (sprintBlend > prevSprintBlend + 1e-6) return "building up";
+            if (sprintBlend < prevSprintBlend - 1e-6) return "building down";
+            return "transitional";
+        }
+        
+        return "normal";
     }
 }

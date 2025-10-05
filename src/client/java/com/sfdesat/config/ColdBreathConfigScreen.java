@@ -228,6 +228,53 @@ public final class ColdBreathConfigScreen {
         AbstractConfigListEntry<?> morningBreathSub =
                 eb.startSubCategory(Text.literal("Morning Breath"), morningBreathEntries).build();
 
+        // --- Health-based Breathing subcategory ---
+        var healthBreathingToggleEntry = eb.startBooleanToggle(Text.literal("Enable Health-based Breathing"), cfg.healthBasedBreathingEnabled)
+                .setDefaultValue(true)
+                .setTooltip(
+                        Text.literal("Enable breathing intervals that change based on player health."),
+                        Text.literal("Players will breathe faster when they have lower health.")
+                )
+                .setSaveConsumer(v -> cfg.healthBasedBreathingEnabled = v)
+                .build();
+
+        var lowHealthIntervalEntry = eb.startIntSlider(
+                        Text.literal("Low Health Interval (seconds)"),
+                        (int) Math.round(cfg.lowHealthIntervalSeconds * 10),
+                        10, 50 // 1.0–5.0 s
+                )
+                .setDefaultValue(30) // 3.0 s
+                .setTextGetter(i -> Text.literal(String.format("%.1f s", i / 10.0)))
+                .setTooltip(
+                        Text.literal("Breathing interval when at 0 hearts (1.0–5.0 s)."),
+                        Text.literal("Default 3.0 - very fast breathing when critically injured.")
+                )
+                .setSaveConsumer(i -> cfg.lowHealthIntervalSeconds = i / 10.0)
+                .build();
+
+        var healthDeviationEntry = eb.startIntSlider(
+                        Text.literal("Health Interval Deviation (seconds)"),
+                        (int) Math.round(cfg.healthIntervalDeviationSeconds * 10),
+                        0, 50 // 0.0–0.5 s
+                )
+                .setDefaultValue(0) // 0.0 s
+                .setTextGetter(i -> Text.literal(String.format("%.1f s", i / 10.0)))
+                .setTooltip(
+                        Text.literal("Random variation for health breathing (0.0–0.5 s)."),
+                        Text.literal("Default 0.0 - scales with damage taken for more erratic breathing when injured.")
+                )
+                .setSaveConsumer(i -> cfg.healthIntervalDeviationSeconds = i / 10.0)
+                .build();
+
+        @SuppressWarnings({"rawtypes"})
+        List<AbstractConfigListEntry> healthBreathEntries = new ArrayList<>();
+        healthBreathEntries.add(healthBreathingToggleEntry);
+        healthBreathEntries.add(lowHealthIntervalEntry);
+        healthBreathEntries.add(healthDeviationEntry);
+
+        AbstractConfigListEntry<?> healthBreathSub =
+                eb.startSubCategory(Text.literal("Health-based Breathing"), healthBreathEntries).build();
+
         // --- Visuals subcategory ---
         var forwardEntry = eb.startDoubleField(Text.literal("Forward Offset"), cfg.forwardOffset)
                 .setDefaultValue(0.3)
@@ -362,6 +409,7 @@ public final class ColdBreathConfigScreen {
         // Attach subcategories in order
         general.addEntry(sprintSub);
         general.addEntry(morningBreathSub);
+        general.addEntry(healthBreathSub);
         general.addEntry(underwaterSub);
         general.addEntry(visualsSub);
         general.addEntry(dimensionsSub);

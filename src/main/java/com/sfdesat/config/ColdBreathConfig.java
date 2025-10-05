@@ -44,4 +44,9 @@ public class ColdBreathConfig {
 
 	// Always breath temperature setting
 	public double alwaysBreathTemperature = 0.15; // temperature threshold where breath always appears
+
+	// Health-based breathing settings
+	public boolean healthBasedBreathingEnabled = true; // enable health-based breathing intervals
+	public double lowHealthIntervalSeconds = 3.0; // breathing interval when at 0 hearts (very fast)
+	public double healthIntervalDeviationSeconds = 0.0; // random variation for health breathing (0.0-0.5s)
 }
