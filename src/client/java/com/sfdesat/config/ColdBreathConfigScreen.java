@@ -21,10 +21,14 @@ public final class ColdBreathConfigScreen {
                 .setTitle(Text.literal("Cold Breath Config"))
                 .setSavingRunnable(ConfigManager::save);
 
-        ConfigCategory general = builder.getOrCreateCategory(Text.literal("Cold Breath"));
+        ConfigCategory mainCat = builder.getOrCreateCategory(Text.literal("Main"));
+        ConfigCategory breathingCat = builder.getOrCreateCategory(Text.literal("Breathing"));
+        ConfigCategory visualsCat = builder.getOrCreateCategory(Text.literal("Visuals"));
+        ConfigCategory visibilityCat = builder.getOrCreateCategory(Text.literal("Visibility"));
+        ConfigCategory debugCat = builder.getOrCreateCategory(Text.literal("Debug"));
         ConfigEntryBuilder eb = builder.entryBuilder();
 
-        // --- Top-level toggles & base timing ---
+        // --- Main ---
         var enabledEntry = eb.startBooleanToggle(Text.literal("Enabled"), cfg.enabled)
                 .setDefaultValue(true)
                 .setTooltip(Text.literal("Master switch for Cold Breath."))
@@ -102,15 +106,15 @@ public final class ColdBreathConfigScreen {
                 .setSaveConsumer(i -> cfg.intervalDeviationSeconds = i / 10.0)
                 .build();
 
-        general.addEntry(enabledEntry);
-        general.addEntry(onlyColdEntry);
-        general.addEntry(altitudeToggleEntry);
-        general.addEntry(altitudeRateEntry);
-        general.addEntry(alwaysBreathTempEntry);
-        general.addEntry(baseIntervalEntry);
-        general.addEntry(baseDevEntry);
+        mainCat.addEntry(enabledEntry);
+        mainCat.addEntry(onlyColdEntry);
+        mainCat.addEntry(altitudeToggleEntry);
+        mainCat.addEntry(altitudeRateEntry);
+        mainCat.addEntry(alwaysBreathTempEntry);
+        mainCat.addEntry(baseIntervalEntry);
+        mainCat.addEntry(baseDevEntry);
 
-        // --- Sprinting subcategory ---
+        // --- Breathing (sprinting) ---
         var sprintToggleEntry = eb.startBooleanToggle(Text.literal("Enable Sprinting-specific Intervals"), cfg.sprintingIntervalsEnabled)
                 .setDefaultValue(true)
                 .setTooltip(Text.literal("Use separate timing while sprinting, with smooth ramp in/out."))
@@ -168,11 +172,10 @@ public final class ColdBreathConfigScreen {
         sprintEntries.add(sprintDevEntry);
         sprintEntries.add(sprintUpEntry);
         sprintEntries.add(sprintDownEntry);
+        AbstractConfigListEntry<?> sprintSub = eb.startSubCategory(Text.literal("Sprinting"), sprintEntries).build();
+        breathingCat.addEntry(sprintSub);
 
-        AbstractConfigListEntry<?> sprintSub =
-                eb.startSubCategory(Text.literal("Sprinting"), sprintEntries).build();
-
-        // --- Morning Breath subcategory ---
+        // --- Breathing (morning breath) ---
         var morningBreathToggleEntry = eb.startBooleanToggle(Text.literal("Enable Morning Breath"), cfg.morningBreathEnabled)
                 .setDefaultValue(true)
                 .setTooltip(
@@ -219,16 +222,15 @@ public final class ColdBreathConfigScreen {
                 .build();
 
         @SuppressWarnings({"rawtypes"})
-        List<AbstractConfigListEntry> morningBreathEntries = new ArrayList<>();
-        morningBreathEntries.add(morningBreathToggleEntry);
-        morningBreathEntries.add(morningBreathStartEntry);
-        morningBreathEntries.add(morningBreathEndEntry);
-        morningBreathEntries.add(maxMorningBreathTempEntry);
+        List<AbstractConfigListEntry> morningEntries = new ArrayList<>();
+        morningEntries.add(morningBreathToggleEntry);
+        morningEntries.add(morningBreathStartEntry);
+        morningEntries.add(morningBreathEndEntry);
+        morningEntries.add(maxMorningBreathTempEntry);
+        AbstractConfigListEntry<?> morningSub = eb.startSubCategory(Text.literal("Morning Breath"), morningEntries).build();
+        breathingCat.addEntry(morningSub);
 
-        AbstractConfigListEntry<?> morningBreathSub =
-                eb.startSubCategory(Text.literal("Morning Breath"), morningBreathEntries).build();
-
-        // --- Health-based Breathing subcategory ---
+        // --- Breathing (health) ---
         var healthBreathingToggleEntry = eb.startBooleanToggle(Text.literal("Enable Health-based Breathing"), cfg.healthBasedBreathingEnabled)
                 .setDefaultValue(true)
                 .setTooltip(
@@ -241,13 +243,13 @@ public final class ColdBreathConfigScreen {
         var lowHealthIntervalEntry = eb.startIntSlider(
                         Text.literal("Low Health Interval (seconds)"),
                         (int) Math.round(cfg.lowHealthIntervalSeconds * 10),
-                        10, 50 // 1.0–5.0 s
+                        5, 20 // 0.5–2.0 s (wider to allow requested min/max)
                 )
-                .setDefaultValue(30) // 3.0 s
+                .setDefaultValue(10) // 1.0 s
                 .setTextGetter(i -> Text.literal(String.format("%.1f s", i / 10.0)))
                 .setTooltip(
-                        Text.literal("Breathing interval when at 0 hearts (1.0–5.0 s)."),
-                        Text.literal("Default 3.0 - very fast breathing when critically injured.")
+                        Text.literal("Breathing interval when at 0 hearts (0.5–2.0 s)."),
+                        Text.literal("Default 1.0 - fast breathing when critically injured.")
                 )
                 .setSaveConsumer(i -> cfg.lowHealthIntervalSeconds = i / 10.0)
                 .build();
@@ -255,27 +257,26 @@ public final class ColdBreathConfigScreen {
         var healthDeviationEntry = eb.startIntSlider(
                         Text.literal("Health Interval Deviation (seconds)"),
                         (int) Math.round(cfg.healthIntervalDeviationSeconds * 10),
-                        0, 50 // 0.0–0.5 s
+                        0, 10 // 0.0–1.0 s (allows max of 2.0 around 1.0 if desired)
                 )
-                .setDefaultValue(0) // 0.0 s
+                .setDefaultValue(2) // 0.5 s default
                 .setTextGetter(i -> Text.literal(String.format("%.1f s", i / 10.0)))
                 .setTooltip(
-                        Text.literal("Random variation for health breathing (0.0–0.5 s)."),
-                        Text.literal("Default 0.0 - scales with damage taken for more erratic breathing when injured.")
+                        Text.literal("Random variation for health breathing (0.0–1.0 s)."),
+                        Text.literal("Default 0.5 - allows min ~0.5 s and max ~2.0 s around 1.0 s base.")
                 )
                 .setSaveConsumer(i -> cfg.healthIntervalDeviationSeconds = i / 10.0)
                 .build();
 
         @SuppressWarnings({"rawtypes"})
-        List<AbstractConfigListEntry> healthBreathEntries = new ArrayList<>();
-        healthBreathEntries.add(healthBreathingToggleEntry);
-        healthBreathEntries.add(lowHealthIntervalEntry);
-        healthBreathEntries.add(healthDeviationEntry);
+        List<AbstractConfigListEntry> healthEntries = new ArrayList<>();
+        healthEntries.add(healthBreathingToggleEntry);
+        healthEntries.add(lowHealthIntervalEntry);
+        healthEntries.add(healthDeviationEntry);
+        AbstractConfigListEntry<?> healthSub = eb.startSubCategory(Text.literal("Health-based"), healthEntries).build();
+        breathingCat.addEntry(healthSub);
 
-        AbstractConfigListEntry<?> healthBreathSub =
-                eb.startSubCategory(Text.literal("Health-based Breathing"), healthBreathEntries).build();
-
-        // --- Visuals subcategory ---
+        // --- Visuals ---
         var forwardEntry = eb.startDoubleField(Text.literal("Forward Offset"), cfg.forwardOffset)
                 .setDefaultValue(0.3)
                 .setMin(0.0)
@@ -322,18 +323,13 @@ public final class ColdBreathConfigScreen {
                 .setSaveConsumer(v -> cfg.breathSize = v)
                 .build();
 
-        @SuppressWarnings({"rawtypes"})
-        List<AbstractConfigListEntry> visualEntries = new ArrayList<>();
-        visualEntries.add(forwardEntry);
-        visualEntries.add(downEntry);
-        visualEntries.add(burstEntry);
-        visualEntries.add(colorEntry);
-        visualEntries.add(sizeEntry);
+        visualsCat.addEntry(forwardEntry);
+        visualsCat.addEntry(downEntry);
+        visualsCat.addEntry(burstEntry);
+        visualsCat.addEntry(colorEntry);
+        visualsCat.addEntry(sizeEntry);
 
-        AbstractConfigListEntry<?> visualsSub =
-                eb.startSubCategory(Text.literal("Visuals"), visualEntries).build();
-
-        // --- Underwater subcategory ---
+        // --- Breathing (underwater) ---
         var uwToggle = eb.startBooleanToggle(Text.literal("Enable Underwater Breaths"), cfg.underwaterEnabled)
                 .setDefaultValue(true)
                 .setTooltip(Text.literal("Show bubble breaths when underwater (has air bar)."))
@@ -363,15 +359,14 @@ public final class ColdBreathConfigScreen {
                 .build();
 
         @SuppressWarnings({"rawtypes"})
-        List<AbstractConfigListEntry> uwEntries = new ArrayList<>();
-        uwEntries.add(uwToggle);
-        uwEntries.add(uwBase);
-        uwEntries.add(uwDev);
+        List<AbstractConfigListEntry> underwaterEntries = new ArrayList<>();
+        underwaterEntries.add(uwToggle);
+        underwaterEntries.add(uwBase);
+        underwaterEntries.add(uwDev);
+        AbstractConfigListEntry<?> underwaterSub = eb.startSubCategory(Text.literal("Underwater"), underwaterEntries).build();
+        breathingCat.addEntry(underwaterSub);
 
-        AbstractConfigListEntry<?> underwaterSub =
-                eb.startSubCategory(Text.literal("Underwater"), uwEntries).build();
-
-        // --- Visibility subcategory ---
+        // --- Visibility ---
         var visibleCreativeEntry = eb.startBooleanToggle(Text.literal("Visible in Creative"), cfg.visibleInCreative)
                 .setDefaultValue(false)
                 .setTooltip(Text.literal("Show breaths while in Creative mode."))
@@ -390,30 +385,18 @@ public final class ColdBreathConfigScreen {
                 .setSaveConsumer(v -> cfg.visibleInEnd = v)
                 .build();
 
-        @SuppressWarnings({"rawtypes"})
-        List<AbstractConfigListEntry> dimensionsEntries = new ArrayList<>();
-        dimensionsEntries.add(visibleCreativeEntry);
-        dimensionsEntries.add(visibleNetherEntry);
-        dimensionsEntries.add(visibleEndEntry);
+        visibilityCat.addEntry(visibleCreativeEntry);
+        visibilityCat.addEntry(visibleNetherEntry);
+        visibilityCat.addEntry(visibleEndEntry);
 
-        AbstractConfigListEntry<?> dimensionsSub =
-                eb.startSubCategory(Text.literal("Visibility"), dimensionsEntries).build();
-
-        // --- Debug (bottom) ---
+        // --- Debug ---
         var debugEntry = eb.startBooleanToggle(Text.literal("Debug Overlay"), cfg.debugEnabled)
                 .setDefaultValue(false)
                 .setTooltip(Text.literal("Show on-screen state and sprint blend values."))
                 .setSaveConsumer(v -> cfg.debugEnabled = v)
                 .build();
 
-        // Attach subcategories in order
-        general.addEntry(sprintSub);
-        general.addEntry(morningBreathSub);
-        general.addEntry(healthBreathSub);
-        general.addEntry(underwaterSub);
-        general.addEntry(visualsSub);
-        general.addEntry(dimensionsSub);
-        general.addEntry(debugEntry);
+        debugCat.addEntry(debugEntry);
 
         return builder.build();
     }

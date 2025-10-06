@@ -2,6 +2,8 @@
 
 Adds a breath effects that adapt to your environment and movement. Giving you a more realistic and immersive experience that is fully configurable. Very customizable, you can change the size, color, duration, interval and more. Designed to be very lightweight and completely configurable.
 
+[Give Feedback](https://github.com/sfDesat/cold-breath/issues/new)
+
 ****
 #### Default behaviour (configurable):
 
@@ -10,6 +12,8 @@ Adds a breath effects that adapt to your environment and movement. Giving you a 
 * Breathing speed changes when sprinting
 * Realisitic breathing intervals
 * Per dimension support (Nether default off, End default on)
+* Breath effect at higher altitudes
+* Morning breath 
 
 ****
 
@@ -18,13 +22,12 @@ Adds a breath effects that adapt to your environment and movement. Giving you a 
 
 ****
 #### Planned features:  
-- Night and morning effect
-- Altitude effect
 - Heat source effect (lava, campfire etc)
 - Status effect integration (fire resistance, slowness etc)
 - Health state
 - Other players breath
 - Per biome customization  
+- Advanced and efficient config screen
 
 ****
 #### Compatibility and Performance:
