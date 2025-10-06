@@ -13,7 +13,8 @@ Adds a breath effects that adapt to your environment and movement. Giving you a 
 * Realisitic breathing intervals
 * Per dimension support (Nether default off, End default on)
 * Breath effect at higher altitudes
-* Morning breath 
+* Morning breath
+* Breathing speed adapts to your health
 
 ****
 
@@ -24,7 +25,6 @@ Adds a breath effects that adapt to your environment and movement. Giving you a 
 #### Planned features:  
 - Heat source effect (lava, campfire etc)
 - Status effect integration (fire resistance, slowness etc)
-- Health state
 - Other players breath
 - Per biome customization  
 - Advanced and efficient config screen
