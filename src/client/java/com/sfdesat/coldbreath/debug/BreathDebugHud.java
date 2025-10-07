@@ -18,6 +18,7 @@ public final class BreathDebugHud {
 		this.blends = blends;
 	}
 
+	@SuppressWarnings("deprecation")
 	public void register() {
 		HudRenderCallback.EVENT.register((context, tickDelta) -> {
 			ColdBreathConfig cfg = ConfigManager.get();
