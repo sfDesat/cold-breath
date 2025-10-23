@@ -35,7 +35,7 @@ public final class BreathSpawner {
 			double vy = Math.max(0, look.y * 0.001) + (r.nextDouble() - 0.5) * 0.002;
 			double vz = look.z * 0.003 + (r.nextDouble() - 0.5) * 0.002;
 
-			DustParticleEffect dust = new DustParticleEffect(cfg.breathColor, (float)Math.max(0.1, cfg.breathSize));
+			DustParticleEffect dust = DustCompat.make(cfg.breathColor, (float)Math.max(0.1, cfg.breathSize));
 			pm.addParticle(dust, spawn.x + ox, spawn.y + oy, spawn.z + oz, vx, vy, vz);
 		}
 	}
