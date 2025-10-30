@@ -2,6 +2,7 @@ package com.sfdesat.coldbreath.debug;
 
 import com.sfdesat.coldbreath.breath.EnvModel;
 import com.sfdesat.coldbreath.breath.StateBlends;
+import com.sfdesat.coldbreath.breath.VersionChecker;
 import com.sfdesat.config.ColdBreathConfig;
 import com.sfdesat.config.ConfigManager;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
@@ -31,7 +32,7 @@ public final class BreathDebugHud {
 			ClientWorld world = client.world;
 
 			// Background panel (very light, transparent)
-			int lines = 8; // total lines we draw below
+			int lines = 9; // total lines we draw below
 			int lineHeight = 12;
 			int padding = 10; // a bit more padding to extend vertically
 			int bgWidth = 260; // slightly narrower background
@@ -121,6 +122,11 @@ public final class BreathDebugHud {
 				dimText = "dim: " + kind.name().toLowerCase() + " (" + world.getRegistryKey().getValue() + ")";
 			}
 			context.drawText(client.textRenderer, Text.literal(dimText), x, y, 0xFFFFFFFF, false);
+			y += 12;
+
+			// 8) Version checker
+			String versionText = "version: " + VersionChecker.getLastUsedConstructor();
+			context.drawText(client.textRenderer, Text.literal(versionText), x, y, 0xFFFFFFFF, false);
 		});
 	}
 

@@ -5,7 +5,7 @@ import net.minecraft.particle.DustParticleEffect;
 import java.lang.reflect.Constructor;
 
 /**
- * Compatibility shim for DustParticleEffect across Minecraft versions.
+ * Version checker and compatibility shim for DustParticleEffect across Minecraft versions.
  * 
  * This class provides a unified interface for creating DustParticleEffect instances
  * that works across different Minecraft versions:
@@ -19,7 +19,7 @@ import java.lang.reflect.Constructor;
  * and caches the result for performance. It automatically converts between
  * the different formats as needed.
  */
-public final class DustCompat {
+public final class VersionChecker {
     
     private enum ConstructorType {
         INT_FLOAT,           // (int, float) - 1.21.2+
@@ -32,7 +32,28 @@ public final class DustCompat {
     private static Constructor<DustParticleEffect> constructor;
     private static boolean initialized = false;
     
-    private DustCompat() {}
+    private VersionChecker() {}
+    
+    /**
+     * Gets the last used constructor type for debugging purposes
+     * @return String describing the constructor type used
+     */
+    public static String getLastUsedConstructor() {
+        if (!initialized) {
+            return "not initialized";
+        }
+        return getVersionDescription() + " (" + constructorType.name().toLowerCase().replace("_", "+") + ")";
+    }
+    
+    private static String getVersionDescription() {
+        switch (constructorType) {
+            case INT_FLOAT: return "1.21.2+";
+            case FLOAT_FLOAT_FLOAT: return "1.20.x/early 1.21";
+            case JOML_VECTOR: return "1.21.1";
+            case MOJANG_VECTOR: return "older mappings";
+            default: return "unknown";
+        }
+    }
     
     /**
      * Creates a DustParticleEffect compatible with all Minecraft versions
