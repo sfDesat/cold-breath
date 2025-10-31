@@ -1,5 +1,6 @@
 package com.sfdesat.coldbreath.breath;
 
+import com.sfdesat.coldbreath.season.SeasonManager;
 import com.sfdesat.config.ColdBreathConfig;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.player.PlayerEntity;
@@ -21,6 +22,7 @@ public final class EnvModel {
 			int altitude = pos.getY();
 			temperature = baseTemperature - (altitude - seaLevel) * (float)cfg.altitudeTemperatureRate;
 		}
+		temperature += (float) SeasonManager.getTemperatureOffset();
 		return temperature;
 	}
 
@@ -58,7 +60,8 @@ public final class EnvModel {
 		if (!cfg.onlyInColdBiomes) return true;
 		if (isColdHere) return true;
 
-		if (cfg.morningBreathEnabled) {
+		boolean morningEnabled = SeasonManager.isMorningBreathEnabled(cfg.morningBreathEnabled);
+		if (cfg.morningBreathEnabled && morningEnabled) {
 			long dayTime = world.getTimeOfDay() % 24000L;
 			boolean inWindow = isWithinDayWindow(dayTime, cfg.morningBreathStartTick, cfg.morningBreathEndTick);
 			boolean goodTemp = temp > cfg.alwaysBreathTemperature && temp <= cfg.maxMorningBreathTemperature;

@@ -1,5 +1,6 @@
 package com.sfdesat.coldbreath.breath;
 
+import com.sfdesat.coldbreath.season.SeasonManager;
 import com.sfdesat.config.ColdBreathConfig;
 import com.sfdesat.config.ConfigManager;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -52,6 +53,7 @@ public final class BreathController {
 		}
 
 		if (time < nextBreathTick) return;
+		SeasonManager.refresh(world);
 
 		if (!EnvModel.isEligibleNow(world, player, cfg)) {
 			scheduleNext(time, cfg);

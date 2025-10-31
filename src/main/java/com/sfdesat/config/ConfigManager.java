@@ -28,10 +28,15 @@ public final class ConfigManager {
 		if (Files.isRegularFile(path)) {
 			try (Reader reader = Files.newBufferedReader(path)) {
 				ColdBreathConfig cfg = GSON.fromJson(reader, ColdBreathConfig.class);
-				if (cfg != null) return cfg;
+				if (cfg != null) {
+					cfg.normalizeSeasonConfig();
+					return cfg;
+				}
 			} catch (IOException ignored) {}
 		}
-		return new ColdBreathConfig();
+		ColdBreathConfig defaults = new ColdBreathConfig();
+		defaults.normalizeSeasonConfig();
+		return defaults;
 	}
 
 	public static void save() {

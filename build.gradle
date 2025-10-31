@@ -10,6 +10,10 @@ base {
 	archivesName = project.archives_base_name
 }
 
+configurations {
+    devRuntimeMods
+}
+
 repositories {
     // Add repositories to retrieve artifacts from in here.
     // You should only use this when depending on other mods because
@@ -18,7 +22,17 @@ repositories {
     // for more information about repositories.
     maven { url "https://maven.shedaniel.me/" }
     maven { url "https://maven.terraformersmc.com/releases/" }
+    mavenCentral()
+    // Modrinth for pulling testing mods like Fabric Seasons
+    maven { url "https://api.modrinth.com/maven" }
+    // CurseMaven as a fallback
+    maven { url "https://cursemaven.com" }
 }
+
+def modrinthDevMods = [
+        sereneSeasons: "maven.modrinth:e0bNACJD:30NJ0mrz",
+        glitchCore    : "maven.modrinth:s3dmwKy5:UF5OQvYS"
+]
 
 loom {
 	splitEnvironmentSourceSets()
@@ -49,6 +63,41 @@ dependencies {
     // ModMenu for config screen access
     modCompileOnly "com.terraformersmc:modmenu:11.0.3"
     modLocalRuntime "com.terraformersmc:modmenu:15.0.0"
+
+    // Serene Seasons runtime (Modrinth version id 30NJ0mrz -> 21.8.0.0)
+    modRuntimeOnly modrinthDevMods.sereneSeasons
+
+    // GlitchCore runtime (Modrinth version id UF5OQvYS -> 21.8.0.0)
+    modRuntimeOnly modrinthDevMods.glitchCore
+
+    // Copy-only configuration for dev runtime mods
+    devRuntimeMods modrinthDevMods.sereneSeasons
+    devRuntimeMods modrinthDevMods.glitchCore
+
+    // Libraries required by GlitchCore/Serene Seasons (normally provided via jar-in-jar)
+    runtimeOnly "com.electronwill.night-config:core:3.6.7"
+    runtimeOnly "com.electronwill.night-config:toml:3.6.7"
+    runtimeOnly "net.jodah:typetools:0.6.3"
+}
+
+tasks.register("syncDevRuntimeMods", Copy) {
+    group = "fabric"
+    description = "Syncs Modrinth dev runtime mods into run/mods for local testing."
+
+    from(configurations.devRuntimeMods)
+    into("run/mods")
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+
+    doFirst {
+        delete fileTree("run/mods") {
+            include "e0bNACJD-*.jar"
+            include "s3dmwKy5-*.jar"
+        }
+    }
+}
+
+tasks.named("runClient").configure {
+    dependsOn("syncDevRuntimeMods")
 }
 
 processResources {

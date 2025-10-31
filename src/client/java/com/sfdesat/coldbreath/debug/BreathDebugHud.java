@@ -3,6 +3,8 @@ package com.sfdesat.coldbreath.debug;
 import com.sfdesat.coldbreath.breath.EnvModel;
 import com.sfdesat.coldbreath.breath.StateBlends;
 import com.sfdesat.coldbreath.breath.VersionChecker;
+import com.sfdesat.coldbreath.season.SeasonDetector;
+import com.sfdesat.coldbreath.season.SeasonManager;
 import com.sfdesat.config.ColdBreathConfig;
 import com.sfdesat.config.ConfigManager;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
@@ -32,7 +34,7 @@ public final class BreathDebugHud {
 			ClientWorld world = client.world;
 
 			// Background panel (very light, transparent)
-			int lines = 9; // total lines we draw below
+			int lines = 11; // total lines we currently draw below
 			int lineHeight = 12;
 			int padding = 10; // a bit more padding to extend vertically
 			int bgWidth = 260; // slightly narrower background
@@ -87,7 +89,8 @@ public final class BreathDebugHud {
 				float effTemp = EnvModel.computeEffectiveTemperature(world, pos, cfg);
 				int sea = world.getSeaLevel();
 				int alt = pos.getY() - sea;
-				String tempLine = String.format("temp: %.3f (base: %.3f), alt: %+d", effTemp, baseTemp, alt);
+				double seasonModifier = SeasonManager.getTemperatureOffset();
+				String tempLine = String.format("temp: %.3f (base: %.3f), alt: %+d, season: %+.3f", effTemp, baseTemp, alt, seasonModifier);
 				context.drawText(client.textRenderer, Text.literal(tempLine), x, y, 0xFFFFFFFF, false);
 				y += 12;
 			}
@@ -98,15 +101,17 @@ public final class BreathDebugHud {
 			context.drawText(client.textRenderer, Text.literal(blendsLine), x, y, 0xFFFFFFFF, false);
 			y += 12;
 
-			// 5) Morning breath: true | false
+			// 5) Morning breath: true | false (season-aware)
 			if (world != null && client.player != null) {
 				long dayTime = world.getTimeOfDay() % 24000L;
 				boolean inWindow = EnvModel.isWithinDayWindow(dayTime, cfg.morningBreathStartTick, cfg.morningBreathEndTick);
 				float temp = EnvModel.computeEffectiveTemperature(world, client.player.getBlockPos(), cfg);
 				boolean okTemp = temp > cfg.alwaysBreathTemperature && temp <= cfg.maxMorningBreathTemperature;
-				boolean morningActive = cfg.morningBreathEnabled && inWindow && okTemp;
+				boolean seasonMorningEnabled = SeasonManager.isMorningBreathEnabled(cfg.morningBreathEnabled);
+				boolean morningActive = seasonMorningEnabled && inWindow && okTemp;
 				int morningColor = morningActive ? 0xFF00FF00 : 0xFFFF0000;
-				context.drawText(client.textRenderer, Text.literal("morning breath: " + (morningActive ? "true" : "false")), x, y, morningColor, false);
+				String morningLabel = seasonMorningEnabled ? (morningActive ? "true" : "false") : "disabled";
+				context.drawText(client.textRenderer, Text.literal("morning breath: " + morningLabel), x, y, morningColor, false);
 				y += 12;
 
 				// 6) Time and morning range
@@ -124,7 +129,23 @@ public final class BreathDebugHud {
 			context.drawText(client.textRenderer, Text.literal(dimText), x, y, 0xFFFFFFFF, false);
 			y += 12;
 
-			// 8) Version checker
+			// 8) Season phase
+			String phaseDisplay = SeasonManager.getCurrentPhase() == com.sfdesat.coldbreath.season.SeasonPhase.UNKNOWN
+					? "none"
+					: SeasonManager.getCurrentPhase().displayName();
+			String seasonStage = "season: " + phaseDisplay;
+			context.drawText(client.textRenderer, Text.literal(seasonStage), x, y, 0xFFFFFFFF, false);
+			y += 12;
+
+			// 9) Season mod detection (Synced with SeasonDetector)
+			String seasonModDisplay = SeasonManager.getCurrentMod() == SeasonDetector.SeasonMod.VANILLA
+					? "none"
+					: SeasonDetector.getDisplayName();
+			String seasonModText = "season mod: " + seasonModDisplay;
+			context.drawText(client.textRenderer, Text.literal(seasonModText), x, y, 0xFFFFFFFF, false);
+			y += 12;
+
+			// 10) Version checker
 			String versionText = "version: " + VersionChecker.getLastUsedConstructor();
 			context.drawText(client.textRenderer, Text.literal(versionText), x, y, 0xFFFFFFFF, false);
 		});
@@ -155,6 +176,7 @@ public final class BreathDebugHud {
 	}
 
 	private static double lerp(double a, double b, double t) { return a + (b - a) * t; }
+
 }
 
 

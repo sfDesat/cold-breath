@@ -1,5 +1,7 @@
 package com.sfdesat.config;
 
+import com.sfdesat.coldbreath.season.SeasonManager;
+import com.sfdesat.coldbreath.season.SeasonPhase;
 import me.shedaniel.clothconfig2.api.AbstractConfigListEntry;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
@@ -9,23 +11,30 @@ import net.minecraft.text.Text;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public final class ColdBreathConfigScreen {
     private ColdBreathConfigScreen() {}
 
     public static Screen create(Screen parent) {
         final ColdBreathConfig cfg = ConfigManager.get();
+		cfg.normalizeSeasonConfig();
 
         ConfigBuilder builder = ConfigBuilder.create()
                 .setParentScreen(parent)
                 .setTitle(Text.literal("Cold Breath Config"))
-                .setSavingRunnable(ConfigManager::save);
+				.setSavingRunnable(() -> {
+					cfg.normalizeSeasonConfig();
+					SeasonManager.applyConfig(cfg);
+					ConfigManager.save();
+				});
 
         ConfigCategory mainCat = builder.getOrCreateCategory(Text.literal("Main"));
-        ConfigCategory breathingCat = builder.getOrCreateCategory(Text.literal("Breathing"));
-        ConfigCategory visualsCat = builder.getOrCreateCategory(Text.literal("Visuals"));
-        ConfigCategory visibilityCat = builder.getOrCreateCategory(Text.literal("Visibility"));
-        ConfigCategory debugCat = builder.getOrCreateCategory(Text.literal("Debug"));
+		ConfigCategory breathingCat = builder.getOrCreateCategory(Text.literal("Breathing"));
+		ConfigCategory seasonsCat = builder.getOrCreateCategory(Text.literal("Seasons"));
+		ConfigCategory visualsCat = builder.getOrCreateCategory(Text.literal("Visuals"));
+		ConfigCategory visibilityCat = builder.getOrCreateCategory(Text.literal("Visibility"));
+		ConfigCategory debugCat = builder.getOrCreateCategory(Text.literal("Debug"));
         ConfigEntryBuilder eb = builder.entryBuilder();
 
         // --- Main ---
@@ -327,7 +336,57 @@ public final class ColdBreathConfigScreen {
         visualsCat.addEntry(downEntry);
         visualsCat.addEntry(burstEntry);
         visualsCat.addEntry(colorEntry);
-        visualsCat.addEntry(sizeEntry);
+		visualsCat.addEntry(sizeEntry);
+
+		// --- Seasons ---
+		var seasonsToggle = eb.startBooleanToggle(Text.literal("Enable Seasonal Adjustments"), cfg.seasonsEnabled)
+				.setDefaultValue(true)
+				.setTooltip(Text.literal("Master switch for seasonal temperature and morning-breath adjustments."))
+				.setSaveConsumer(v -> cfg.seasonsEnabled = v)
+				.build();
+
+		var sereneToggle = eb.startBooleanToggle(Text.literal("Use Serene Seasons Integration"), cfg.sereneSeasonsIntegration)
+				.setDefaultValue(true)
+				.setTooltip(Text.literal("When enabled and Serene Seasons is installed, use its data for season-aware adjustments."))
+				.setSaveConsumer(v -> cfg.sereneSeasonsIntegration = v)
+				.build();
+
+		SeasonPhase[] phases = SeasonPhase.orderedValues();
+		double[] defaultTemps = ColdBreathConfig.defaultTemperatureOffsets();
+		boolean[] defaultMorning = ColdBreathConfig.defaultMorningBreath();
+
+		@SuppressWarnings("rawtypes")
+		List<AbstractConfigListEntry> perSeasonEntries = new ArrayList<>();
+		for (int i = 0; i < phases.length; i++) {
+			final int index = i;
+			SeasonPhase phase = phases[index];
+			String display = phase.displayName();
+			String label = display.isEmpty()
+					? "Subseason " + (index + 1)
+					: display.substring(0, 1).toUpperCase(Locale.ROOT) + display.substring(1);
+
+			var tempEntry = eb.startDoubleField(Text.literal(label + " Temperature Offset"), cfg.seasonTemperatureOffsets[index])
+					.setDefaultValue(defaultTemps[index])
+					.setTooltip(Text.literal("Adjust the effective temperature during " + display + "."))
+					.setMin(-1.0)
+					.setMax(1.0)
+					.setSaveConsumer(v -> cfg.seasonTemperatureOffsets[index] = v)
+					.build();
+
+			var morningEntry = eb.startBooleanToggle(Text.literal(label + " Morning Breath"), cfg.seasonMorningBreath[index])
+					.setDefaultValue(defaultMorning[index])
+					.setTooltip(Text.literal("Enable morning breath effects during " + display + "."))
+					.setSaveConsumer(v -> cfg.seasonMorningBreath[index] = v)
+					.build();
+
+			perSeasonEntries.add(tempEntry);
+			perSeasonEntries.add(morningEntry);
+		}
+
+		AbstractConfigListEntry<?> perSeasonSub = eb.startSubCategory(Text.literal("Per Sub-season Adjustments"), perSeasonEntries).build();
+		seasonsCat.addEntry(seasonsToggle);
+		seasonsCat.addEntry(sereneToggle);
+		seasonsCat.addEntry(perSeasonSub);
 
         // --- Breathing (underwater) ---
         var uwToggle = eb.startBooleanToggle(Text.literal("Enable Underwater Breaths"), cfg.underwaterEnabled)

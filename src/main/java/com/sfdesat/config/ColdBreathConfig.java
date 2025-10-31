@@ -1,5 +1,7 @@
 package com.sfdesat.config;
 
+import com.sfdesat.coldbreath.season.SeasonPhase;
+
 public class ColdBreathConfig {
 	public boolean enabled = true;
 	public boolean visibleInCreative = false; // show effect in creative when true
@@ -27,6 +29,12 @@ public class ColdBreathConfig {
 	// Debug overlay
 	public boolean debugEnabled = false;
 
+	// Seasons
+	public boolean seasonsEnabled = true;
+	public boolean sereneSeasonsIntegration = true;
+	public double[] seasonTemperatureOffsets = defaultTemperatureOffsets();
+	public boolean[] seasonMorningBreath = defaultMorningBreath();
+
 	// Underwater settings
 	public boolean underwaterEnabled = true; // enable underwater breaths
 	public double underwaterBaseIntervalSeconds = 8.0;
@@ -49,4 +57,45 @@ public class ColdBreathConfig {
 	public boolean healthBasedBreathingEnabled = true; // enable health-based breathing intervals
 	public double lowHealthIntervalSeconds = 1.0; // breathing interval when at 0 hearts (very fast)
 	public double healthIntervalDeviationSeconds = 0.2; // random variation for health breathing (0.0-0.5s)
+
+	public static double[] defaultTemperatureOffsets() {
+		return new double[] {
+				0.02D, 0.04D, 0.05D,
+				0.08D, 0.12D, 0.10D,
+				0.02D, -0.02D, -0.06D,
+				-0.10D, -0.14D, -0.12D
+		};
+	}
+
+	public static boolean[] defaultMorningBreath() {
+		return new boolean[] {
+				true, true, true,
+				true, true, true,
+				true, true, true,
+				false, false, false
+		};
+	}
+
+	public void normalizeSeasonConfig() {
+		int len = SeasonPhase.orderedValues().length;
+		if (seasonTemperatureOffsets == null) {
+			seasonTemperatureOffsets = defaultTemperatureOffsets();
+		} else if (seasonTemperatureOffsets.length != len) {
+			double[] copy = defaultTemperatureOffsets();
+			for (int i = 0; i < Math.min(len, seasonTemperatureOffsets.length); i++) {
+				copy[i] = seasonTemperatureOffsets[i];
+			}
+			seasonTemperatureOffsets = copy;
+		}
+
+		if (seasonMorningBreath == null) {
+			seasonMorningBreath = defaultMorningBreath();
+		} else if (seasonMorningBreath.length != len) {
+			boolean[] copy = defaultMorningBreath();
+			for (int i = 0; i < Math.min(len, seasonMorningBreath.length); i++) {
+				copy[i] = seasonMorningBreath[i];
+			}
+			seasonMorningBreath = copy;
+		}
+	}
 }
