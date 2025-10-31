@@ -65,7 +65,6 @@ public final class DebugChat {
         }
 
         for (DebugCategory category : snapshot.categories()) {
-            source.sendFeedback(Text.literal("--- " + category.descriptor().displayName() + " ---"));
             for (DebugLine line : category.lines()) {
                 source.sendFeedback(toColoredText(line));
             }
@@ -96,7 +95,6 @@ public final class DebugChat {
             return 1;
         }
 
-        source.sendFeedback(Text.literal("--- " + descriptor.displayName() + " ---"));
         for (DebugLine line : categoryOpt.get().lines()) {
             source.sendFeedback(toColoredText(line));
         }

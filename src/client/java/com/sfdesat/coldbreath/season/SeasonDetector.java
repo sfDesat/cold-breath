@@ -15,27 +15,25 @@ public final class SeasonDetector {
     private SeasonDetector() {}
 
     public static void init() {
-        // Try common IDs for Serene Seasons on Fabric
-        if (isAnyLoaded(
+        boolean sereneLoaded = isAnyLoaded(
                 "sereneseasons",
                 "serene_seasons",
                 "serene-seasons"
-        )) {
-            detected = SeasonMod.SERENE_SEASONS;
-            return;
-        }
+        );
 
-        // Try common IDs for Fabric Seasons
-        if (isAnyLoaded(
+        boolean fabricLoaded = isAnyLoaded(
                 "seasons",
                 "fabricseasons",
                 "fabric-seasons"
-        )) {
-            detected = SeasonMod.FABRIC_SEASONS;
-            return;
-        }
+        );
 
-        detected = SeasonMod.VANILLA;
+        if (sereneLoaded) {
+            detected = SeasonMod.SERENE_SEASONS;
+        } else if (fabricLoaded) {
+            detected = SeasonMod.FABRIC_SEASONS;
+        } else {
+            detected = SeasonMod.VANILLA;
+        }
     }
 
     public static SeasonMod getDetected() {

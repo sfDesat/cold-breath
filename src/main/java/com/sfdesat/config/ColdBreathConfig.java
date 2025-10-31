@@ -33,6 +33,7 @@ public class ColdBreathConfig {
 	// Seasons
 	public boolean seasonsEnabled = true;
 	public boolean sereneSeasonsIntegration = true;
+	public boolean fabricSeasonsIntegration = true;
 	public double[] seasonTemperatureOffsets = defaultTemperatureOffsets();
 	public boolean[] seasonMorningBreath = defaultMorningBreath();
 

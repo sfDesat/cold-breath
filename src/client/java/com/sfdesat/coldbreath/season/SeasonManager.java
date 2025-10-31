@@ -18,6 +18,7 @@ public final class SeasonManager {
 
     private static boolean seasonsEnabled = true;
     private static boolean sereneSeasonsEnabled = true;
+    private static boolean fabricSeasonsEnabled = true;
 
     private static SeasonSnapshot latest = SeasonSnapshot.empty(SeasonDetector.getDetected());
 
@@ -33,6 +34,7 @@ public final class SeasonManager {
         cfg.normalizeSeasonConfig();
         seasonsEnabled = cfg.seasonsEnabled;
         sereneSeasonsEnabled = cfg.sereneSeasonsIntegration;
+        fabricSeasonsEnabled = cfg.fabricSeasonsIntegration;
 
         ADJUSTMENTS.clear();
         SeasonPhase[] phases = SeasonPhase.orderedValues();
@@ -61,10 +63,16 @@ public final class SeasonManager {
 
         SeasonMod mod = SeasonDetector.getDetected();
         if (mod == SeasonMod.SERENE_SEASONS && !sereneSeasonsEnabled) {
-            mod = SeasonMod.VANILLA;
+            mod = fabricSeasonsEnabled ? SeasonMod.FABRIC_SEASONS : SeasonMod.VANILLA;
+        } else if (mod == SeasonMod.FABRIC_SEASONS && !fabricSeasonsEnabled) {
+            mod = sereneSeasonsEnabled ? SeasonMod.SERENE_SEASONS : SeasonMod.VANILLA;
         }
 
-        latest = SereneInput.sample(world, mod);
+        if (mod == SeasonMod.FABRIC_SEASONS) {
+            latest = FabricInput.sample(world, mod);
+        } else {
+            latest = SereneInput.sample(world, mod);
+        }
     }
 
     public static double getTemperatureOffset() {

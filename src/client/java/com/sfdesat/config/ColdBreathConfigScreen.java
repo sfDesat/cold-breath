@@ -386,6 +386,14 @@ public final class ColdBreathConfigScreen {
 		AbstractConfigListEntry<?> perSeasonSub = eb.startSubCategory(Text.literal("Per Sub-season Adjustments"), perSeasonEntries).build();
 		seasonsCat.addEntry(seasonsToggle);
 		seasonsCat.addEntry(sereneToggle);
+
+		var fabricSeasonsToggle = eb.startBooleanToggle(Text.literal("Use Fabric Seasons Integration"), cfg.fabricSeasonsIntegration)
+				.setDefaultValue(true)
+				.setTooltip(Text.literal("When enabled and Fabric Seasons is installed, use its data for season-aware adjustments."))
+				.setSaveConsumer(v -> cfg.fabricSeasonsIntegration = v)
+				.build();
+
+		seasonsCat.addEntry(fabricSeasonsToggle);
 		seasonsCat.addEntry(perSeasonSub);
 
         // --- Breathing (underwater) ---
