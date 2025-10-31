@@ -43,32 +43,48 @@ public final class EnvModel {
 		return DimensionKind.OTHER;
 	}
 
-	public static boolean isEligibleNow(ClientWorld world, PlayerEntity player, ColdBreathConfig cfg) {
-		if (!cfg.enabled) return false;
-		if (player.isSpectator() || player.isSleeping() || player.isDead()) return false;
-		if (!cfg.visibleInCreative && player.getAbilities().creativeMode) return false;
+    public static BreathEligibility checkEligibility(ClientWorld world, PlayerEntity player, ColdBreathConfig cfg) {
+        if (!cfg.enabled) return BreathEligibility.deny("disabled");
+        if (player.isSpectator()) return BreathEligibility.deny("spectator");
+        if (player.isSleeping()) return BreathEligibility.deny("sleeping");
+        if (player.isDead()) return BreathEligibility.deny("dead");
+        if (!cfg.visibleInCreative && player.getAbilities().creativeMode) return BreathEligibility.deny("creative");
 
-		if (player.isSubmergedInWater()) return cfg.underwaterEnabled;
+        if (player.isSubmergedInWater()) {
+            return cfg.underwaterEnabled
+                    ? BreathEligibility.allow()
+                    : BreathEligibility.deny("underwater");
+        }
 
-		DimensionKind dim = getDimensionKind(world);
-		if (dim == DimensionKind.NETHER) return cfg.visibleInNether;
-		if (dim == DimensionKind.END) return cfg.visibleInEnd;
+        DimensionKind dim = getDimensionKind(world);
+        if (dim == DimensionKind.NETHER && !cfg.visibleInNether) return BreathEligibility.deny("nether hidden");
+        if (dim == DimensionKind.END && !cfg.visibleInEnd) return BreathEligibility.deny("end hidden");
 
-		BlockPos pos = player.getBlockPos();
-		float temp = computeEffectiveTemperature(world, pos, cfg);
-		boolean isColdHere = temp <= cfg.alwaysBreathTemperature;
-		if (!cfg.onlyInColdBiomes) return true;
-		if (isColdHere) return true;
+        BlockPos pos = player.getBlockPos();
+        float temp = computeEffectiveTemperature(world, pos, cfg);
+        boolean isColdHere = temp <= cfg.alwaysBreathTemperature;
+        if (cfg.alwaysShowBreath || isColdHere) return BreathEligibility.allow();
 
-		boolean morningEnabled = SeasonManager.isMorningBreathEnabled(cfg.morningBreathEnabled);
-		if (cfg.morningBreathEnabled && morningEnabled) {
-			long dayTime = world.getTimeOfDay() % 24000L;
-			boolean inWindow = isWithinDayWindow(dayTime, cfg.morningBreathStartTick, cfg.morningBreathEndTick);
-			boolean goodTemp = temp > cfg.alwaysBreathTemperature && temp <= cfg.maxMorningBreathTemperature;
-			return inWindow && goodTemp;
-		}
-		return false;
-	}
+        if (!cfg.breathCondensationEnabled) return BreathEligibility.deny("condensation off");
+
+        long dayTime = world.getTimeOfDay() % 24000L;
+        boolean inWindow = isWithinDayWindow(dayTime, cfg.breathCondensationStartTick, cfg.breathCondensationEndTick);
+        if (!inWindow) return BreathEligibility.deny("condensation window");
+
+        boolean goodTemp = temp > cfg.alwaysBreathTemperature && temp <= cfg.maxBreathCondensationTemperature;
+        return goodTemp ? BreathEligibility.allow() : BreathEligibility.deny("temperature");
+    }
+
+    public static boolean isEligibleNow(ClientWorld world, PlayerEntity player, ColdBreathConfig cfg) {
+        return checkEligibility(world, player, cfg).allowed();
+    }
+
+    public record BreathEligibility(boolean allowed, String reason) {
+        private static final BreathEligibility ALWAYS = new BreathEligibility(true, null);
+
+        public static BreathEligibility allow() { return ALWAYS; }
+        public static BreathEligibility deny(String reason) { return new BreathEligibility(false, reason); }
+    }
 
 	public enum DimensionKind {
 		OVERWORLD,

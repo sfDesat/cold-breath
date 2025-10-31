@@ -10,7 +10,7 @@ import java.util.Map;
 
 /**
  * Central manager responsible for keeping track of the current season and exposing
- * derived environmental adjustments (temperature bias, morning-breath toggles, etc.).
+ * derived environmental adjustments (temperature bias, breath-condensation toggles, etc.).
  */
 public final class SeasonManager {
 
@@ -41,9 +41,7 @@ public final class SeasonManager {
         for (int i = 0; i < phases.length; i++) {
             ADJUSTMENTS.put(phases[i], new SeasonAdjustment(
                     cfg.seasonTemperatureOffsets[i],
-                    cfg.seasonMorningBreath[i],
-                    0,
-                    0
+                    cfg.seasonBreathCondensation[i]
             ));
         }
 
@@ -91,12 +89,12 @@ public final class SeasonManager {
         return seasonsEnabled ? latest.mod() : SeasonMod.VANILLA;
     }
 
-    public static boolean isMorningBreathEnabled(boolean defaultValue) {
+    public static boolean isBreathCondensationEnabled(boolean defaultValue) {
         if (!seasonsEnabled || latest.mod() == SeasonMod.VANILLA) {
             return defaultValue;
         }
         SeasonAdjustment adjustment = ADJUSTMENTS.getOrDefault(latest.phase(), SeasonAdjustment.DEFAULT);
-        return adjustment.morningBreathEnabled();
+        return adjustment.breathCondensationEnabled();
     }
 
     public static Map<SeasonPhase, SeasonAdjustment> getAdjustmentsView() {
@@ -107,9 +105,8 @@ public final class SeasonManager {
         return latest;
     }
 
-    public record SeasonAdjustment(double temperatureOffset, boolean morningBreathEnabled,
-                                   int morningStartShift, int morningEndShift) {
-        private static final SeasonAdjustment DEFAULT = new SeasonAdjustment(0.0D, true, 0, 0);
+    public record SeasonAdjustment(double temperatureOffset, boolean breathCondensationEnabled) {
+        private static final SeasonAdjustment DEFAULT = new SeasonAdjustment(0.0D, true);
     }
 }
 

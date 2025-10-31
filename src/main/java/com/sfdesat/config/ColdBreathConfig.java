@@ -5,7 +5,7 @@ import com.sfdesat.coldbreath.season.SeasonPhase;
 public class ColdBreathConfig {
 	public boolean enabled = true;
 	public boolean visibleInCreative = false; // show effect in creative when true
-	public boolean onlyInColdBiomes = true; // only show in areas with temperature <= 0.15f by default
+	public boolean alwaysShowBreath = false; // when true, breath appears even in warm temperatures
     public boolean visibleInNether = false; // show effect in Nether when true
     public boolean visibleInEnd = true; // show effect in End when true
 	// Seconds-based settings (with 0.1s precision via UI sliders)
@@ -35,7 +35,7 @@ public class ColdBreathConfig {
 	public boolean sereneSeasonsIntegration = true;
 	public boolean fabricSeasonsIntegration = true;
 	public double[] seasonTemperatureOffsets = defaultTemperatureOffsets();
-	public boolean[] seasonMorningBreath = defaultMorningBreath();
+	public boolean[] seasonBreathCondensation = defaultBreathCondensation();
 
 	// Underwater settings
 	public boolean underwaterEnabled = true; // enable underwater breaths
@@ -46,11 +46,11 @@ public class ColdBreathConfig {
 	public boolean altitudeAdjustmentEnabled = true; // enable altitude-based temperature adjustment
 	public double altitudeTemperatureRate = 0.00125; // temperature decrease per block above sea level
 
-	// Morning breath settings
-	public boolean morningBreathEnabled = true; // enable morning breath during specific time window
-	public long morningBreathStartTick = 22500; // start of morning breath time window (in ticks)
-	public long morningBreathEndTick = 1500; // end of morning breath time window (in ticks)
-	public double maxMorningBreathTemperature = 0.7; // maximum temperature for morning breath
+	// Breath condensation settings
+	public boolean breathCondensationEnabled = true; // enable visible breath condensation during specific time window
+	public long breathCondensationStartTick = 22500; // start of condensation time window (in ticks)
+	public long breathCondensationEndTick = 1500; // end of condensation time window (in ticks)
+	public double maxBreathCondensationTemperature = 0.7; // maximum temperature for condensation
 
 	// Always breath temperature setting
 	public double alwaysBreathTemperature = 0.15; // temperature threshold where breath always appears
@@ -69,12 +69,12 @@ public class ColdBreathConfig {
 		};
 	}
 
-	public static boolean[] defaultMorningBreath() {
+	public static boolean[] defaultBreathCondensation() {
 		return new boolean[] {
-				true, true, true,
-				true, true, true,
-				true, true, true,
-				false, false, false
+			true, true, false,
+			false, false, false,
+			false, true, true,
+			true, true, true
 		};
 	}
 
@@ -90,14 +90,14 @@ public class ColdBreathConfig {
 			seasonTemperatureOffsets = copy;
 		}
 
-		if (seasonMorningBreath == null) {
-			seasonMorningBreath = defaultMorningBreath();
-		} else if (seasonMorningBreath.length != len) {
-			boolean[] copy = defaultMorningBreath();
-			for (int i = 0; i < Math.min(len, seasonMorningBreath.length); i++) {
-				copy[i] = seasonMorningBreath[i];
+		if (seasonBreathCondensation == null) {
+			seasonBreathCondensation = defaultBreathCondensation();
+		} else if (seasonBreathCondensation.length != len) {
+			boolean[] copy = defaultBreathCondensation();
+			for (int i = 0; i < Math.min(len, seasonBreathCondensation.length); i++) {
+				copy[i] = seasonBreathCondensation[i];
 			}
-			seasonMorningBreath = copy;
+			seasonBreathCondensation = copy;
 		}
 	}
 }

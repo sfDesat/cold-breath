@@ -13,7 +13,7 @@ Adds a breath effects that adapt to your environment and movement. Giving you a 
 * Realisitic breathing intervals
 * Per dimension support (Nether default off, End default on)
 * Breath effect at higher altitudes
-* Morning breath
+* Breath condensation
 * Breathing speed adapts to your health
 
 ****

@@ -38,57 +38,56 @@ public final class ColdBreathConfigScreen {
         ConfigEntryBuilder eb = builder.entryBuilder();
 
         // --- Main ---
-        var enabledEntry = eb.startBooleanToggle(Text.literal("Enabled"), cfg.enabled)
+		var enabledEntry = eb.startBooleanToggle(Text.literal("Enabled"), cfg.enabled)
                 .setDefaultValue(true)
                 .setTooltip(Text.literal("Master switch for Cold Breath."))
                 .setSaveConsumer(v -> cfg.enabled = v)
                 .build();
 
-        var onlyColdEntry = eb.startBooleanToggle(Text.literal("Only in Cold Temperatures"), cfg.onlyInColdBiomes)
-                .setDefaultValue(true)
-                .setTooltip(
-                        Text.literal("If enabled, breaths only appear in cold areas and during morning hours."),
-                        Text.literal("Cold areas: temperature <= Always Breath Temperature threshold."),
-                        Text.literal("Morning hours: configurable time window with morning breath settings."),
-                        Text.literal("Nether/End visibility is controlled below.")
-                )
-                .setSaveConsumer(v -> cfg.onlyInColdBiomes = v)
-                .build();
+		var alwaysShowEntry = eb.startBooleanToggle(Text.literal("Always Show Breath"), cfg.alwaysShowBreath)
+				.setDefaultValue(false)
+				.setTooltip(
+						Text.literal("If enabled, breath appears even in warmer temperatures."),
+						Text.literal("When off, breath follows the Breath Temperature threshold and condensation window."),
+						Text.literal("Nether/End visibility is configured in the Visibility tab.")
+				)
+				.setSaveConsumer(v -> cfg.alwaysShowBreath = v)
+				.build();
 
-        var altitudeToggleEntry = eb.startBooleanToggle(Text.literal("Enable Altitude Adjustment"), cfg.altitudeAdjustmentEnabled)
+		var altitudeToggleEntry = eb.startBooleanToggle(Text.literal("Enable Altitude Effects"), cfg.altitudeAdjustmentEnabled)
                 .setDefaultValue(true)
                 .setTooltip(
-                        Text.literal("If enabled, temperature decreases with altitude above sea level."),
-                        Text.literal("This allows cold breath to appear at high altitudes in warmer biomes.")
+						Text.literal("If enabled, temperature decreases with altitude above sea level."),
+						Text.literal("This allows breath to show at high altitudes in warmer biomes.")
                 )
                 .setSaveConsumer(v -> cfg.altitudeAdjustmentEnabled = v)
                 .build();
 
-        var altitudeRateEntry = eb.startIntSlider(
-                        Text.literal("Altitude Temperature Rate"),
+		var altitudeRateEntry = eb.startIntSlider(
+					Text.literal("Altitude Rate"),
                         (int) Math.round(cfg.altitudeTemperatureRate * 100000), // Convert to int (0-1000 range)
                         0, 1000 // 0.00000–0.01000 per block
                 )
                 .setDefaultValue(125) // 0.00125
                 .setTextGetter(i -> Text.literal(String.format("%.5f", i / 100000.0)))
-                .setTooltip(
-                        Text.literal("Temperature decrease per block above sea level (0.00000–0.01000)."),
-                        Text.literal("Default 0.00125 matches Minecraft's vanilla behavior.")
-                )
+			.setTooltip(
+					Text.literal("Temperature decrease per block above sea level (0.00000–0.01000)."),
+					Text.literal("Default 0.00125 matches Minecraft's vanilla behavior.")
+			)
                 .setSaveConsumer(i -> cfg.altitudeTemperatureRate = i / 100000.0)
                 .build();
 
-        var alwaysBreathTempEntry = eb.startIntSlider(
-                        Text.literal("Always Breath Temperature"),
+		var alwaysBreathTempEntry = eb.startIntSlider(
+					Text.literal("Breath Temperature"),
                         (int) Math.round(cfg.alwaysBreathTemperature * 1000), // Convert to int (0-1000 range)
                         0, 1000 // 0.000–1.000
                 )
                 .setDefaultValue(150) // 0.15
                 .setTextGetter(i -> Text.literal(String.format("%.3f", i / 1000.0)))
-                .setTooltip(
-                        Text.literal("Temperature threshold where breath always appears (0.000–1.000)."),
-                        Text.literal("Default 0.15 - breath will always show in cold biomes below this temperature.")
-                )
+			.setTooltip(
+					Text.literal("Temperature threshold where breath always appears (0.000–1.000)."),
+					Text.literal("Default 0.15 - breath always shows in biomes colder than this.")
+			)
                 .setSaveConsumer(i -> cfg.alwaysBreathTemperature = i / 1000.0)
                 .build();
 
@@ -115,8 +114,8 @@ public final class ColdBreathConfigScreen {
                 .setSaveConsumer(i -> cfg.intervalDeviationSeconds = i / 10.0)
                 .build();
 
-        mainCat.addEntry(enabledEntry);
-        mainCat.addEntry(onlyColdEntry);
+		mainCat.addEntry(enabledEntry);
+		mainCat.addEntry(alwaysShowEntry);
         mainCat.addEntry(altitudeToggleEntry);
         mainCat.addEntry(altitudeRateEntry);
         mainCat.addEntry(alwaysBreathTempEntry);
@@ -124,7 +123,7 @@ public final class ColdBreathConfigScreen {
         mainCat.addEntry(baseDevEntry);
 
         // --- Breathing (sprinting) ---
-        var sprintToggleEntry = eb.startBooleanToggle(Text.literal("Enable Sprinting-specific Intervals"), cfg.sprintingIntervalsEnabled)
+		var sprintToggleEntry = eb.startBooleanToggle(Text.literal("Enable Sprinting Interval"), cfg.sprintingIntervalsEnabled)
                 .setDefaultValue(true)
                 .setTooltip(Text.literal("Use separate timing while sprinting, with smooth ramp in/out."))
                 .setSaveConsumer(v -> cfg.sprintingIntervalsEnabled = v)
@@ -184,60 +183,60 @@ public final class ColdBreathConfigScreen {
         AbstractConfigListEntry<?> sprintSub = eb.startSubCategory(Text.literal("Sprinting"), sprintEntries).build();
         breathingCat.addEntry(sprintSub);
 
-        // --- Breathing (morning breath) ---
-        var morningBreathToggleEntry = eb.startBooleanToggle(Text.literal("Enable Morning Breath"), cfg.morningBreathEnabled)
-                .setDefaultValue(true)
-                .setTooltip(
-                        Text.literal("Enable morning breath during early morning hours."),
-                        Text.literal("Breath will appear in moderate temperatures during the configured time window.")
-                )
-                .setSaveConsumer(v -> cfg.morningBreathEnabled = v)
-                .build();
+		// --- Breathing (breath condensation) ---
+		var condensationToggleEntry = eb.startBooleanToggle(Text.literal("Enable Breath Condensation"), cfg.breathCondensationEnabled)
+				.setDefaultValue(true)
+				.setTooltip(
+						Text.literal("Enable visible breath condensation during cool time windows."),
+						Text.literal("Breath will appear in moderate temperatures during the configured condensation window.")
+				)
+				.setSaveConsumer(v -> cfg.breathCondensationEnabled = v)
+				.build();
 
-        var morningBreathStartEntry = eb.startLongField(Text.literal("Morning Breath Start (ticks)"), cfg.morningBreathStartTick)
-                .setDefaultValue(22500L)
-                .setMin(0L)
-                .setMax(23999L)
-                .setTooltip(
-                        Text.literal("Start of morning breath time window (0-23999 ticks)."),
-                        Text.literal("Default 22500 - breath starts appearing at this time.")
-                )
-                .setSaveConsumer(v -> cfg.morningBreathStartTick = v)
-                .build();
+		var condensationStartEntry = eb.startLongField(Text.literal("Condensation Start (ticks)"), cfg.breathCondensationStartTick)
+				.setDefaultValue(22500L)
+				.setMin(0L)
+				.setMax(23999L)
+				.setTooltip(
+						Text.literal("Start of the breath condensation window (0-23999 ticks)."),
+						Text.literal("Default 22500 - condensation begins at this time.")
+				)
+				.setSaveConsumer(v -> cfg.breathCondensationStartTick = v)
+				.build();
 
-        var morningBreathEndEntry = eb.startLongField(Text.literal("Morning Breath End (ticks)"), cfg.morningBreathEndTick)
-                .setDefaultValue(1500L)
-                .setMin(0L)
-                .setMax(23999L)
-                .setTooltip(
-                        Text.literal("End of morning breath time window (0-23999 ticks)."),
-                        Text.literal("Default 1500 - breath stops appearing at this time.")
-                )
-                .setSaveConsumer(v -> cfg.morningBreathEndTick = v)
-                .build();
+		var condensationEndEntry = eb.startLongField(Text.literal("Condensation End (ticks)"), cfg.breathCondensationEndTick)
+				.setDefaultValue(1500L)
+				.setMin(0L)
+				.setMax(23999L)
+				.setTooltip(
+						Text.literal("End of the breath condensation window (0-23999 ticks)."),
+						Text.literal("Default 1500 - condensation stops at this time.")
+				)
+				.setSaveConsumer(v -> cfg.breathCondensationEndTick = v)
+				.build();
 
-        var maxMorningBreathTempEntry = eb.startIntSlider(
-                        Text.literal("Max Morning Breath Temperature"),
-                        (int) Math.round(cfg.maxMorningBreathTemperature * 1000), // Convert to int (0-1000 range)
-                        0, 1000 // 0.000–1.000
-                )
-                .setDefaultValue(700) // 0.7
-                .setTextGetter(i -> Text.literal(String.format("%.3f", i / 1000.0)))
-                .setTooltip(
-                        Text.literal("Maximum temperature for morning breath (0.000–1.000)."),
-                        Text.literal("Default 0.7 - morning breath appears between always-breath temp and this value.")
-                )
-                .setSaveConsumer(i -> cfg.maxMorningBreathTemperature = i / 1000.0)
-                .build();
+		var maxCondensationTempEntry = eb.startIntSlider(
+					Text.literal("Max Condensation Temperature"),
+					(int) Math.round(cfg.maxBreathCondensationTemperature * 1000), // Convert to int (0-1000 range)
+					0, 1000 // 0.000–1.000
+			)
+			.setDefaultValue(700) // 0.7
+			.setTextGetter(i -> Text.literal(String.format("%.3f", i / 1000.0)))
+			.setTooltip(
+					Text.literal("Maximum temperature for breath condensation (0.000–1.000)."),
+					Text.literal("Default 0.7 - condensation appears between always-breath temp and this value.")
+			)
+			.setSaveConsumer(i -> cfg.maxBreathCondensationTemperature = i / 1000.0)
+			.build();
 
-        @SuppressWarnings({"rawtypes"})
-        List<AbstractConfigListEntry> morningEntries = new ArrayList<>();
-        morningEntries.add(morningBreathToggleEntry);
-        morningEntries.add(morningBreathStartEntry);
-        morningEntries.add(morningBreathEndEntry);
-        morningEntries.add(maxMorningBreathTempEntry);
-        AbstractConfigListEntry<?> morningSub = eb.startSubCategory(Text.literal("Morning Breath"), morningEntries).build();
-        breathingCat.addEntry(morningSub);
+		@SuppressWarnings({"rawtypes"})
+		List<AbstractConfigListEntry> condensationEntries = new ArrayList<>();
+		condensationEntries.add(condensationToggleEntry);
+		condensationEntries.add(condensationStartEntry);
+		condensationEntries.add(condensationEndEntry);
+		condensationEntries.add(maxCondensationTempEntry);
+		AbstractConfigListEntry<?> condensationSub = eb.startSubCategory(Text.literal("Breath Condensation"), condensationEntries).build();
+		breathingCat.addEntry(condensationSub);
 
         // --- Breathing (health) ---
         var healthBreathingToggleEntry = eb.startBooleanToggle(Text.literal("Enable Health-based Breathing"), cfg.healthBasedBreathingEnabled)
@@ -339,13 +338,16 @@ public final class ColdBreathConfigScreen {
 		visualsCat.addEntry(sizeEntry);
 
 		// --- Seasons ---
-		var seasonsToggle = eb.startBooleanToggle(Text.literal("Enable Seasonal Adjustments"), cfg.seasonsEnabled)
+		var seasonsToggle = eb.startBooleanToggle(Text.literal("Enable Seasons"), cfg.seasonsEnabled)
 				.setDefaultValue(true)
-				.setTooltip(Text.literal("Master switch for seasonal temperature and morning-breath adjustments."))
+				.setTooltip(
+						Text.literal("Master switch for seasonal temperature and condensation adjustments."),
+						Text.literal("Requires a supported season mod for live data; otherwise uses simple cycling.")
+				)
 				.setSaveConsumer(v -> cfg.seasonsEnabled = v)
 				.build();
 
-		var sereneToggle = eb.startBooleanToggle(Text.literal("Use Serene Seasons Integration"), cfg.sereneSeasonsIntegration)
+		var sereneToggle = eb.startBooleanToggle(Text.literal("Input Serene Seasons"), cfg.sereneSeasonsIntegration)
 				.setDefaultValue(true)
 				.setTooltip(Text.literal("When enabled and Serene Seasons is installed, use its data for season-aware adjustments."))
 				.setSaveConsumer(v -> cfg.sereneSeasonsIntegration = v)
@@ -353,10 +355,12 @@ public final class ColdBreathConfigScreen {
 
 		SeasonPhase[] phases = SeasonPhase.orderedValues();
 		double[] defaultTemps = ColdBreathConfig.defaultTemperatureOffsets();
-		boolean[] defaultMorning = ColdBreathConfig.defaultMorningBreath();
+		boolean[] defaultCondensation = ColdBreathConfig.defaultBreathCondensation();
 
 		@SuppressWarnings("rawtypes")
-		List<AbstractConfigListEntry> perSeasonEntries = new ArrayList<>();
+		List<AbstractConfigListEntry> perSeasonTempEntries = new ArrayList<>();
+		@SuppressWarnings("rawtypes")
+		List<AbstractConfigListEntry> perSeasonCondensationEntries = new ArrayList<>();
 		for (int i = 0; i < phases.length; i++) {
 			final int index = i;
 			SeasonPhase phase = phases[index];
@@ -373,28 +377,30 @@ public final class ColdBreathConfigScreen {
 					.setSaveConsumer(v -> cfg.seasonTemperatureOffsets[index] = v)
 					.build();
 
-			var morningEntry = eb.startBooleanToggle(Text.literal(label + " Morning Breath"), cfg.seasonMorningBreath[index])
-					.setDefaultValue(defaultMorning[index])
-					.setTooltip(Text.literal("Enable morning breath effects during " + display + "."))
-					.setSaveConsumer(v -> cfg.seasonMorningBreath[index] = v)
+			var condensationEntry = eb.startBooleanToggle(Text.literal(label + " Breath Condensation"), cfg.seasonBreathCondensation[index])
+					.setDefaultValue(defaultCondensation[index])
+					.setTooltip(Text.literal("Enable breath condensation effects during " + display + "."))
+					.setSaveConsumer(v -> cfg.seasonBreathCondensation[index] = v)
 					.build();
 
-			perSeasonEntries.add(tempEntry);
-			perSeasonEntries.add(morningEntry);
+			perSeasonTempEntries.add(tempEntry);
+			perSeasonCondensationEntries.add(condensationEntry);
 		}
 
-		AbstractConfigListEntry<?> perSeasonSub = eb.startSubCategory(Text.literal("Per Sub-season Adjustments"), perSeasonEntries).build();
+		AbstractConfigListEntry<?> perSeasonTempSub = eb.startSubCategory(Text.literal("Season Temperature"), perSeasonTempEntries).build();
+		AbstractConfigListEntry<?> perSeasonCondensationSub = eb.startSubCategory(Text.literal("Season Breath Condensation"), perSeasonCondensationEntries).build();
 		seasonsCat.addEntry(seasonsToggle);
 		seasonsCat.addEntry(sereneToggle);
 
-		var fabricSeasonsToggle = eb.startBooleanToggle(Text.literal("Use Fabric Seasons Integration"), cfg.fabricSeasonsIntegration)
+		var fabricSeasonsToggle = eb.startBooleanToggle(Text.literal("Input Fabric Seasons"), cfg.fabricSeasonsIntegration)
 				.setDefaultValue(true)
 				.setTooltip(Text.literal("When enabled and Fabric Seasons is installed, use its data for season-aware adjustments."))
 				.setSaveConsumer(v -> cfg.fabricSeasonsIntegration = v)
 				.build();
 
 		seasonsCat.addEntry(fabricSeasonsToggle);
-		seasonsCat.addEntry(perSeasonSub);
+		seasonsCat.addEntry(perSeasonTempSub);
+		seasonsCat.addEntry(perSeasonCondensationSub);
 
         // --- Breathing (underwater) ---
         var uwToggle = eb.startBooleanToggle(Text.literal("Enable Underwater Breaths"), cfg.underwaterEnabled)

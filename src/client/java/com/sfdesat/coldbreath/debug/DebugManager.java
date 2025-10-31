@@ -25,12 +25,12 @@ import java.util.Optional;
 public final class DebugManager {
 
     private static final List<CategoryDescriptor> CATEGORY_DESCRIPTORS = List.of(
-            new CategoryDescriptor("breathing", "Breathing", List.of("breath")),
+            new CategoryDescriptor("visible_breath", "Visible Breath", List.of("breath")),
             new CategoryDescriptor("interval", "Breathing Interval", List.of()),
             new CategoryDescriptor("interval_range", "Interval Range", List.of("range", "minmax")),
             new CategoryDescriptor("temperature", "Temperature", List.of("temp")),
             new CategoryDescriptor("status", "Status", List.of()),
-            new CategoryDescriptor("morning", "Morning Breath", List.of()),
+            new CategoryDescriptor("breath_condensation", "Breath Condensation", List.of("condensation")),
             new CategoryDescriptor("time_range", "Daytime", List.of("time", "daytime")),
             new CategoryDescriptor("dimension", "Dimension", List.of("dim")),
             new CategoryDescriptor("season", "Season Phase", List.of("phase")),
@@ -71,20 +71,26 @@ public final class DebugManager {
         ClientWorld world = client.world;
 
         // Breathing state
-        String breathingText = "breathing: unknown";
+        String breathingText = "visible breath: unknown";
         int breathingColor = 0xFFFFFFFF;
         if (world != null && client.player != null) {
             boolean underwater = client.player.isSubmergedInWater();
             if (underwater && cfg.underwaterEnabled) {
-                breathingText = "breathing: bubbles";
+                breathingText = "visible breath: bubbles";
                 breathingColor = 0xFF4EA3FF;
             } else {
-                boolean eligible = EnvModel.isEligibleNow(world, client.player, cfg);
-                breathingText = eligible ? "breathing: true" : "breathing: false";
-                breathingColor = eligible ? 0xFF00FF00 : 0xFFFF0000;
+                EnvModel.BreathEligibility eligibility = EnvModel.checkEligibility(world, client.player, cfg);
+                if (eligibility.allowed()) {
+                    breathingText = "visible breath: yes";
+                    breathingColor = 0xFF00FF00;
+                } else {
+                    String reason = eligibility.reason() == null ? "unknown" : eligibility.reason();
+                    breathingText = "visible breath: no (" + reason + ")";
+                    breathingColor = 0xFFFF0000;
+                }
             }
         }
-        builder.addLine(descriptorFor("breathing"), new DebugLine(breathingText, breathingColor));
+        builder.addLine(descriptorFor("visible_breath"), new DebugLine(breathingText, breathingColor));
 
         // Interval information
         double baseInterval = BreathController.INSTANCE.getCurrentBaseIntervalSeconds(cfg);
@@ -122,19 +128,18 @@ public final class DebugManager {
         // Status information
         builder.addLine(descriptorFor("status"), new DebugLine(String.format(Locale.ROOT, "status: %s | sprint: %.2f | health: %.2f", getDebugState(cfg), blends.getSprintBlend(), blends.getHealthBlend()), 0xFFFFFFFF));
 
-        // Morning breath and time information
+        // Breath condensation and time information
         if (world != null && client.player != null) {
             long dayTime = world.getTimeOfDay() % 24000L;
-            boolean inWindow = EnvModel.isWithinDayWindow(dayTime, cfg.morningBreathStartTick, cfg.morningBreathEndTick);
+            boolean inWindow = EnvModel.isWithinDayWindow(dayTime, cfg.breathCondensationStartTick, cfg.breathCondensationEndTick);
             float temp = EnvModel.computeEffectiveTemperature(world, client.player.getBlockPos(), cfg);
-            boolean okTemp = temp > cfg.alwaysBreathTemperature && temp <= cfg.maxMorningBreathTemperature;
-            boolean seasonMorningEnabled = SeasonManager.isMorningBreathEnabled(cfg.morningBreathEnabled);
-            boolean morningActive = seasonMorningEnabled && inWindow && okTemp;
-            int morningColor = morningActive ? 0xFF00FF00 : 0xFFFF0000;
-            String morningLabel = seasonMorningEnabled ? (morningActive ? "true" : "false") : "disabled";
-            builder.addLine(descriptorFor("morning"), new DebugLine("morning breath: " + morningLabel, morningColor));
+            boolean okTemp = temp > cfg.alwaysBreathTemperature && temp <= cfg.maxBreathCondensationTemperature;
+            boolean seasonCondensationEnabled = SeasonManager.isBreathCondensationEnabled(cfg.breathCondensationEnabled);
+            boolean condensationActive = seasonCondensationEnabled && inWindow && okTemp;
+            String condensationLabel = seasonCondensationEnabled ? (condensationActive ? "true" : "false") : "disabled";
+            builder.addLine(descriptorFor("breath_condensation"), new DebugLine("breath condensation: " + condensationLabel, 0xFFFFFFFF));
 
-            String range = String.format(Locale.ROOT, "time: %d | morning range: %d-%d", dayTime, cfg.morningBreathStartTick, cfg.morningBreathEndTick);
+            String range = String.format(Locale.ROOT, "time: %d | condensation window: %d-%d", dayTime, cfg.breathCondensationStartTick, cfg.breathCondensationEndTick);
             builder.addLine(descriptorFor("time_range"), new DebugLine(range, 0xFFFFFFFF));
         }
 
