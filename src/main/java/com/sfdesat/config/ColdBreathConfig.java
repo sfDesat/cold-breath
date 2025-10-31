@@ -28,6 +28,7 @@ public class ColdBreathConfig {
 
 	// Debug overlay
 	public boolean debugEnabled = false;
+	public boolean debugCommandsEnabled = true;
 
 	// Seasons
 	public boolean seasonsEnabled = true;

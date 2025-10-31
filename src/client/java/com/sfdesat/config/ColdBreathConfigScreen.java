@@ -457,6 +457,14 @@ public final class ColdBreathConfigScreen {
 
         debugCat.addEntry(debugEntry);
 
+        var debugCommandsEntry = eb.startBooleanToggle(Text.literal("Debug Commands"), cfg.debugCommandsEnabled)
+                .setDefaultValue(true)
+                .setTooltip(Text.literal("Allow the /coldbreath client commands."))
+                .setSaveConsumer(v -> cfg.debugCommandsEnabled = v)
+                .build();
+
+        debugCat.addEntry(debugCommandsEntry);
+
         return builder.build();
     }
 }
