@@ -8,13 +8,13 @@ Adds a breath effects that adapt to your environment and movement. Giving you a 
 #### Default behaviour (configurable):
 
 * Breath in cold biomes
-* Underwater breathing with bubbles
-* Breathing speed changes when sprinting
 * Realisitic breathing intervals
+* Breathing speed adjusts based on sprinting and health
+* Breath bubbles underwater
+* Season mods are supported (Serene Seasons and Fabric Seasons)
 * Per dimension support (Nether default off, End default on)
-* Breath effect at higher altitudes
-* Breath condensation
-* Breathing speed adapts to your health
+* Altitude effects your breath
+* Breath condensation in the morning
 
 ****
 
@@ -26,8 +26,7 @@ Adds a breath effects that adapt to your environment and movement. Giving you a 
 - Heat source effect (lava, campfire etc)
 - Status effect integration (fire resistance, slowness etc)
 - Other players breath
-- Per biome customization  
-- Advanced and efficient config screen
+- More visual breath configuration
 
 ****
 #### Compatibility and Performance:
