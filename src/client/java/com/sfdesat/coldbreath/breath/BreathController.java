@@ -1,5 +1,6 @@
 package com.sfdesat.coldbreath.breath;
 
+import com.sfdesat.coldbreath.api.ColdBreathApi;
 import com.sfdesat.coldbreath.season.SeasonManager;
 import com.sfdesat.config.ColdBreathConfig;
 import com.sfdesat.config.ConfigManager;
@@ -55,7 +56,7 @@ public final class BreathController {
 		if (time < nextBreathTick) return;
 		SeasonManager.refresh(world);
 
-		if (!EnvModel.isEligibleNow(world, player, cfg)) {
+        if (!EnvModel.isEligibleNow(world, player, cfg)) {
 			scheduleNext(time, cfg);
 			return;
 		}
@@ -64,12 +65,14 @@ public final class BreathController {
 		if (player.isSubmergedInWater() && cfg.underwaterEnabled) {
 			startBurst(time, cfg);
 			scheduleNextUnderwater(time, cfg);
+            ColdBreathApi.publishBreathEvent();
 			return;
 		}
 
 		// Air path: use normal interval logic (sprint/health blending)
 		startBurst(time, cfg);
 		scheduleNext(time, cfg);
+        ColdBreathApi.publishBreathEvent();
 	}
 
 	private void startBurst(long now, ColdBreathConfig cfg) {
