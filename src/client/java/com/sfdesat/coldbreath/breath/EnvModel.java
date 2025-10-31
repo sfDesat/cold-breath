@@ -67,6 +67,10 @@ public final class EnvModel {
 
         if (!cfg.breathCondensationEnabled) return BreathEligibility.deny("condensation off");
 
+        if (!SeasonManager.isBreathCondensationEnabled(true)) {
+            return BreathEligibility.deny("season");
+        }
+
         long dayTime = world.getTimeOfDay() % 24000L;
         boolean inWindow = isWithinDayWindow(dayTime, cfg.breathCondensationStartTick, cfg.breathCondensationEndTick);
         if (!inWindow) return BreathEligibility.deny("condensation window");

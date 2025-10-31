@@ -49,6 +49,8 @@ public final class ColdBreathApi {
         ClientWorld world = client.world;
         PlayerEntity player = client.player;
 
+        SeasonManager.refresh(world);
+
         EnvModel.BreathEligibility eligibility = EnvModel.checkEligibility(world, player, cfg);
         boolean underwater = player.isSubmergedInWater() && cfg.underwaterEnabled;
         float temperature = EnvModel.computeEffectiveTemperature(world, player.getBlockPos(), cfg);
