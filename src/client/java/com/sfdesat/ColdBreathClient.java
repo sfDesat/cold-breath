@@ -17,7 +17,21 @@ public class ColdBreathClient implements ClientModInitializer {
         BreathController.INSTANCE.register();
 
         DebugManager debugManager = new DebugManager(BreathController.INSTANCE.getBlends());
-        new DebugHud(debugManager).register();
-        new DebugChat(debugManager).register();
+
+        try {
+            new DebugHud(debugManager).register();
+        } catch (LinkageError err) {
+            ColdBreathMod.LOGGER.warn("Cold Breath debug HUD disabled due to missing client rendering classes: {}", err.toString());
+        } catch (RuntimeException err) {
+            ColdBreathMod.LOGGER.warn("Cold Breath debug HUD failed to initialize; debug overlay will be unavailable.", err);
+        }
+
+        try {
+            new DebugChat(debugManager).register();
+        } catch (LinkageError err) {
+            ColdBreathMod.LOGGER.warn("Cold Breath debug chat commands disabled due to missing client command API: {}", err.toString());
+        } catch (RuntimeException err) {
+            ColdBreathMod.LOGGER.warn("Cold Breath debug chat commands failed to initialize.", err);
+        }
     }
 }

@@ -12,7 +12,7 @@ import java.lang.reflect.Constructor;
  * 
  * - 1.21.2+: new DustParticleEffect(int rgb, float scale)
  * - 1.20.x/early 1.21: new DustParticleEffect(float r, float g, float b, float scale)
- * - 1.21.1: new DustParticleEffect(org.joml.Vector3f color, float scale)
+ * - 1.21.1-: new DustParticleEffect(org.joml.Vector3f color, float scale)
  * - (rare) older mappings: new DustParticleEffect(com.mojang.math.Vector3f color, float scale)
  * 
  * The shim uses reflection to detect which constructor is available at runtime
@@ -49,7 +49,7 @@ public final class VersionChecker {
         switch (constructorType) {
             case INT_FLOAT: return "1.21.2+";
             case FLOAT_FLOAT_FLOAT: return "1.20.x/early 1.21";
-            case JOML_VECTOR: return "1.21.1";
+            case JOML_VECTOR: return "1.21.1-";
             case MOJANG_VECTOR: return "older mappings";
             default: return "unknown";
         }

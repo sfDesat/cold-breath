@@ -465,7 +465,10 @@ public final class ColdBreathConfigScreen {
         // --- Debug ---
         var debugEntry = eb.startBooleanToggle(Text.literal("Debug Overlay"), cfg.debugEnabled)
                 .setDefaultValue(false)
-                .setTooltip(Text.literal("Show on-screen state and sprint blend values."))
+                .setTooltip(
+                        Text.literal("Show on-screen state and sprint blend values."),
+                        Text.literal("Requires Minecraft 1.21.4 or newer; older versions should use /coldbreath commands.")
+                )
                 .setSaveConsumer(v -> cfg.debugEnabled = v)
                 .build();
 
