@@ -27,6 +27,7 @@ Adds a breath effects that adapt to your environment and movement. Giving you a 
 - Status effect integration (fire resistance, slowness etc)
 - Other players breath
 - More visual breath configuration
+- Support temperature mods like Though As Nails
 
 ****
 #### Compatibility and Performance:
