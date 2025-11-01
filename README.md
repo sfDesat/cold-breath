@@ -8,7 +8,7 @@ Adds a breath effects that adapt to your environment and movement. Giving you a 
 #### Default behaviour (configurable):
 
 * Breath in cold biomes
-* Realisitic breathing intervals
+* Realistic breathing intervals
 * Breathing speed adjusts based on sprinting and health
 * Breath bubbles underwater
 * Season mods are supported (Serene Seasons and Fabric Seasons)
