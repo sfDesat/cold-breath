@@ -39,7 +39,7 @@ public final class BreathController {
 		PlayerEntity player = client.player;
 		if (world == null || player == null) return;
 
-		long time = world.getTime();
+		long time = WorldTimeAccessor.getTime(world);
 		blends.tick(player, cfg);
 
 		if (time < breathBurstEndTick) {
