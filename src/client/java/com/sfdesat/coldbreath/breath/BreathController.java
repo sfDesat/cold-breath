@@ -19,11 +19,15 @@ public final class BreathController {
 
 	private long nextBreathTick;
 	private long breathBurstEndTick;
+	private long nextBurstEmitTick;
+	private long internalTick;
 	private final StateBlends blends;
 
 	public BreathController() {
 		this.nextBreathTick = 0L;
 		this.breathBurstEndTick = 0L;
+		this.nextBurstEmitTick = 0L;
+		this.internalTick = 0L;
 		this.blends = new StateBlends();
 	}
 
@@ -39,16 +43,17 @@ public final class BreathController {
 		PlayerEntity player = client.player;
 		if (world == null || player == null) return;
 
-		long time = WorldTimeAccessor.getTime(world);
+		long time = ++internalTick;
 		blends.tick(player, cfg);
 
 		if (time < breathBurstEndTick) {
-			if (time % BURST_EMIT_PERIOD_TICKS == 0) {
+			if (time >= nextBurstEmitTick) {
 				if (player.isSubmergedInWater()) {
 					if (cfg.underwaterEnabled) BreathSpawner.spawnUnderwater(client, world, player);
 				} else {
 					BreathSpawner.spawnAir(client, world, player, cfg);
 				}
+				nextBurstEmitTick = time + BURST_EMIT_PERIOD_TICKS;
 			}
 			return;
 		}
@@ -77,6 +82,7 @@ public final class BreathController {
 
 	private void startBurst(long now, ColdBreathConfig cfg) {
 		breathBurstEndTick = now + cfg.breathBurstDurationTicks;
+		nextBurstEmitTick = now;
 	}
 
 	private void scheduleNext(long nowTick, ColdBreathConfig cfg) {
