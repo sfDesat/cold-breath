@@ -5,9 +5,9 @@ import com.sfdesat.coldbreath.season.SeasonManager;
 import com.sfdesat.config.ColdBreathConfig;
 import com.sfdesat.config.ConfigManager;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.world.entity.player.Player;
 
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -35,23 +35,23 @@ public final class BreathController {
 		ClientTickEvents.END_CLIENT_TICK.register(client -> onTick(client));
 	}
 
-	private void onTick(MinecraftClient client) {
+	private void onTick(Minecraft client) {
 		ColdBreathConfig cfg = ConfigManager.get();
 		if (!cfg.enabled) return;
 		if (client.isPaused()) return;
-		ClientWorld world = client.world;
-		PlayerEntity player = client.player;
-		if (world == null || player == null) return;
+		ClientLevel level = client.level;
+		Player player = client.player;
+		if (level == null || player == null) return;
 
 		long time = ++internalTick;
 		blends.tick(player, cfg);
 
 		if (time < breathBurstEndTick) {
 			if (time >= nextBurstEmitTick) {
-				if (player.isSubmergedInWater()) {
-					if (cfg.underwaterEnabled) BreathSpawner.spawnUnderwater(client, world, player);
+				if (player.isUnderWater()) {
+					if (cfg.underwaterEnabled) BreathSpawner.spawnUnderwater(client, level, player);
 				} else {
-					BreathSpawner.spawnAir(client, world, player, cfg);
+					BreathSpawner.spawnAir(client, level, player, cfg);
 				}
 				nextBurstEmitTick = time + BURST_EMIT_PERIOD_TICKS;
 			}
@@ -59,25 +59,23 @@ public final class BreathController {
 		}
 
 		if (time < nextBreathTick) return;
-		SeasonManager.refresh(world);
+		SeasonManager.refresh(level);
 
-        if (!EnvModel.isEligibleNow(world, player, cfg)) {
+		if (!EnvModel.isEligibleNow(level, player, cfg)) {
 			scheduleNext(time, cfg);
 			return;
 		}
 
-		// Underwater path: only underwater interval should be respected
-		if (player.isSubmergedInWater() && cfg.underwaterEnabled) {
+		if (player.isUnderWater() && cfg.underwaterEnabled) {
 			startBurst(time, cfg);
 			scheduleNextUnderwater(time, cfg);
-            ColdBreathApi.publishBreathEvent();
+			ColdBreathApi.publishBreathEvent();
 			return;
 		}
 
-		// Air path: use normal interval logic (sprint/health blending)
 		startBurst(time, cfg);
 		scheduleNext(time, cfg);
-        ColdBreathApi.publishBreathEvent();
+		ColdBreathApi.publishBreathEvent();
 	}
 
 	private void startBurst(long now, ColdBreathConfig cfg) {
@@ -104,7 +102,7 @@ public final class BreathController {
 		double base;
 		double dev;
 		if (Math.abs(afterSprint - afterHealth) <= INTERVAL_TIE_EPSILON) {
-			base = afterSprint; // equal enough
+			base = afterSprint;
 			dev = 0.5 * (devAfterSprint + devAfterHealth);
 		} else if (afterSprint < afterHealth) {
 			base = afterSprint;
@@ -117,7 +115,7 @@ public final class BreathController {
 		double minSec = Math.max(0.1, base - dev);
 		double maxSec = Math.max(minSec, base + dev);
 		double waitSec = (maxSec <= minSec) ? minSec : ThreadLocalRandom.current().nextDouble(minSec, maxSec);
-		int waitTicks = Math.max(1, (int)Math.round(waitSec * TICKS_PER_SECOND));
+		int waitTicks = Math.max(1, (int) Math.round(waitSec * TICKS_PER_SECOND));
 		this.nextBreathTick = nowTick + waitTicks;
 	}
 
@@ -129,7 +127,7 @@ public final class BreathController {
 		double minSec = Math.max(0.1, base - dev);
 		double maxSec = Math.max(minSec, base + dev);
 		double waitSec = (maxSec <= minSec) ? minSec : ThreadLocalRandom.current().nextDouble(minSec, maxSec);
-		int waitTicks = Math.max(1, (int)Math.round(waitSec * TICKS_PER_SECOND));
+		int waitTicks = Math.max(1, (int) Math.round(waitSec * TICKS_PER_SECOND));
 		this.nextBreathTick = nowTick + waitTicks;
 	}
 
@@ -182,5 +180,3 @@ public final class BreathController {
 
 	public static final BreathController INSTANCE = new BreathController();
 }
-
-

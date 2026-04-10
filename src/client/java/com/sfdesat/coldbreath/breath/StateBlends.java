@@ -1,7 +1,7 @@
 package com.sfdesat.coldbreath.breath;
 
 import com.sfdesat.config.ColdBreathConfig;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.world.entity.player.Player;
 
 public final class StateBlends {
 
@@ -17,15 +17,15 @@ public final class StateBlends {
 		this.prevHealthBlend = 0.0;
 	}
 
-	public void tick(PlayerEntity player, ColdBreathConfig cfg) {
+	public void tick(Player player, ColdBreathConfig cfg) {
 		prevSprintBlend = sprintBlend;
 		prevHealthBlend = healthBlend;
 		updateSprintBlend(player, cfg);
 		updateHealthBlend(player, cfg);
 	}
 
-	private void updateSprintBlend(PlayerEntity player, ColdBreathConfig cfg) {
-		boolean underwater = player.isSubmergedInWater();
+	private void updateSprintBlend(Player player, ColdBreathConfig cfg) {
+		boolean underwater = player.isUnderWater();
 		double dt = 1.0 / 20.0;
 		double upRate = cfg.sprintBuildUpSeconds <= 0 ? 1.0 : dt / cfg.sprintBuildUpSeconds;
 		double downRate = cfg.sprintBuildDownSeconds <= 0 ? 1.0 : dt / cfg.sprintBuildDownSeconds;
@@ -41,7 +41,7 @@ public final class StateBlends {
 		else if (target < sprintBlend) sprintBlend = Math.max(0.0, sprintBlend - downRate);
 	}
 
-	private void updateHealthBlend(PlayerEntity player, ColdBreathConfig cfg) {
+	private void updateHealthBlend(Player player, ColdBreathConfig cfg) {
 		if (!cfg.healthBasedBreathingEnabled) {
 			healthBlend = 0.0;
 			return;
@@ -50,8 +50,7 @@ public final class StateBlends {
 		float currentHealth = player.getHealth();
 		float healthPercentage = 1.0f - (currentHealth / maxHealth);
 		double target = Math.max(0.0, Math.min(1.0, healthPercentage));
-		// exponential smoothing
-		double alpha = 0.2; // response speed
+		double alpha = 0.2;
 		healthBlend = healthBlend + alpha * (target - healthBlend);
 	}
 
@@ -60,5 +59,3 @@ public final class StateBlends {
 	public double getHealthBlend() { return healthBlend; }
 	public double getPrevHealthBlend() { return prevHealthBlend; }
 }
-
-

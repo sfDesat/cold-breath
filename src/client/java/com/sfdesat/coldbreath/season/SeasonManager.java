@@ -3,7 +3,7 @@ package com.sfdesat.coldbreath.season;
 import com.sfdesat.coldbreath.season.SereneInput.SeasonSnapshot;
 import com.sfdesat.coldbreath.season.SeasonDetector.SeasonMod;
 import com.sfdesat.config.ColdBreathConfig;
-import net.minecraft.client.world.ClientWorld;
+import net.minecraft.client.multiplayer.ClientLevel;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -53,7 +53,7 @@ public final class SeasonManager {
     /**
      * Refreshes the cached season snapshot. Call this only when a breath attempt is about to be processed.
      */
-    public static void refresh(ClientWorld world) {
+    public static void refresh(ClientLevel level) {
         if (!seasonsEnabled) {
             latest = SeasonSnapshot.empty(SeasonMod.VANILLA);
             return;
@@ -67,9 +67,9 @@ public final class SeasonManager {
         }
 
         if (mod == SeasonMod.FABRIC_SEASONS) {
-            latest = FabricInput.sample(world, mod);
+            latest = FabricInput.sample(level, mod);
         } else {
-            latest = SereneInput.sample(world, mod);
+            latest = SereneInput.sample(level, mod);
         }
     }
 

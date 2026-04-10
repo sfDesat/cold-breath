@@ -1,6 +1,7 @@
 plugins {
-	id 'fabric-loom' version "${loom_version}"
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
 	id 'maven-publish'
+	id 'java-library'
 }
 
 version = project.mod_version
@@ -10,29 +11,13 @@ base {
 	archivesName = project.archives_base_name
 }
 
-configurations {
-    devRuntimeMods
-}
-
 repositories {
-    // Add repositories to retrieve artifacts from in here.
-    // You should only use this when depending on other mods because
-    // Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
-    // See https://docs.gradle.org/current/userguide/declaring_repositories.html
-    // for more information about repositories.
-    maven { url "https://maven.shedaniel.me/" }
-    maven { url "https://maven.terraformersmc.com/releases/" }
-    mavenCentral()
-    // Modrinth for pulling testing mods like Fabric Seasons
-    maven { url "https://api.modrinth.com/maven" }
-    // CurseMaven as a fallback
-    maven { url "https://cursemaven.com" }
+	maven { url "https://maven.shedaniel.me/" }
+	maven { url "https://maven.terraformersmc.com/releases/" }
+	mavenCentral()
+	maven { url "https://api.modrinth.com/maven" }
+	maven { url "https://cursemaven.com" }
 }
-
-def modrinthDevMods = [
-        sereneSeasons: "maven.modrinth:e0bNACJD:30NJ0mrz",
-        glitchCore    : "maven.modrinth:s3dmwKy5:UF5OQvYS"
-]
 
 loom {
 	splitEnvironmentSourceSets()
@@ -43,61 +28,19 @@ loom {
 			sourceSet sourceSets.client
 		}
 	}
-
 }
 
 dependencies {
-	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
-    // Fabric API. This is technically optional, but you probably want it anyway.
-	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-    
-    // Cloth Config (client-side config UI)
-    modApi("me.shedaniel.cloth:cloth-config-fabric:19.0.147") {
-        exclude(group: "net.fabricmc.fabric-api")
-    }
+	api("me.shedaniel.cloth:cloth-config-fabric:26.1.154") {
+		exclude(group: "net.fabricmc.fabric-api")
+	}
 
-    // ModMenu for config screen access
-    modCompileOnly "com.terraformersmc:modmenu:11.0.3"
-    modLocalRuntime "com.terraformersmc:modmenu:15.0.0"
-
-    // Serene Seasons runtime (Modrinth version id 30NJ0mrz -> 21.8.0.0)
-    modRuntimeOnly modrinthDevMods.sereneSeasons
-
-    // GlitchCore runtime (Modrinth version id UF5OQvYS -> 21.8.0.0)
-    modRuntimeOnly modrinthDevMods.glitchCore
-
-    // Copy-only configuration for dev runtime mods
-    devRuntimeMods modrinthDevMods.sereneSeasons
-    devRuntimeMods modrinthDevMods.glitchCore
-
-    // Libraries required by GlitchCore/Serene Seasons (normally provided via jar-in-jar)
-    runtimeOnly "com.electronwill.night-config:core:3.6.7"
-    runtimeOnly "com.electronwill.night-config:toml:3.6.7"
-    runtimeOnly "net.jodah:typetools:0.6.3"
-}
-
-tasks.register("syncDevRuntimeMods", Copy) {
-    group = "fabric"
-    description = "Syncs Modrinth dev runtime mods into run/mods for local testing."
-
-    from(configurations.devRuntimeMods)
-    into("run/mods")
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
-
-    doFirst {
-        delete fileTree("run/mods") {
-            include "e0bNACJD-*.jar"
-            include "s3dmwKy5-*.jar"
-        }
-    }
-}
-
-tasks.named("runClient").configure {
-    dependsOn("syncDevRuntimeMods")
+	compileOnly "com.terraformersmc:modmenu:18.0.0-alpha.8"
+	runtimeOnly "com.terraformersmc:modmenu:18.0.0-alpha.8"
 }
 
 processResources {
@@ -109,17 +52,13 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 17
+	it.options.release = 25
 }
 
 java {
-	// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
-	// if it is present.
-	// If you remove this line, sources will not be generated.
 	withSourcesJar()
-
-	sourceCompatibility = JavaVersion.VERSION_17
-	targetCompatibility = JavaVersion.VERSION_17
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
 }
 
 jar {
@@ -130,7 +69,6 @@ jar {
 	}
 }
 
-// configure the maven publication
 publishing {
 	publications {
 		create("mavenJava", MavenPublication) {
@@ -138,12 +76,6 @@ publishing {
 			from components.java
 		}
 	}
-
-	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
 	repositories {
-		// Add repositories to publish to here.
-		// Notice: This block does NOT have the same function as the block in the top level.
-		// The repositories here will be used for publishing your artifact, not for
-		// retrieving dependencies.
 	}
 }

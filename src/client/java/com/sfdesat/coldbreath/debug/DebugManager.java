@@ -3,15 +3,14 @@ package com.sfdesat.coldbreath.debug;
 import com.sfdesat.coldbreath.breath.BreathController;
 import com.sfdesat.coldbreath.breath.EnvModel;
 import com.sfdesat.coldbreath.breath.StateBlends;
-import com.sfdesat.coldbreath.breath.VersionChecker;
 import com.sfdesat.coldbreath.season.SeasonDetector;
 import com.sfdesat.coldbreath.season.SeasonManager;
 import com.sfdesat.coldbreath.season.SeasonPhase;
 import com.sfdesat.config.ColdBreathConfig;
 import com.sfdesat.config.ConfigManager;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.core.BlockPos;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,7 +34,7 @@ public final class DebugManager {
             new CategoryDescriptor("dimension", "Dimension", List.of("dim")),
             new CategoryDescriptor("season", "Season Phase", List.of("phase")),
             new CategoryDescriptor("season_mod", "Season Mod", List.of("seasonmod", "mod")),
-            new CategoryDescriptor("version", "Version Checker", List.of("version", "ver"))
+            new CategoryDescriptor("version", "Particles", List.of("version", "ver", "particle"))
     );
 
     private static final Map<String, CategoryDescriptor> DESCRIPTORS_BY_KEY = buildDescriptorIndex();
@@ -62,19 +61,19 @@ public final class DebugManager {
     }
 
     public DebugSnapshot capture() {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client == null) return DebugSnapshot.empty();
 
         ColdBreathConfig cfg = ConfigManager.get();
         Builder builder = new Builder();
 
-        ClientWorld world = client.world;
+        ClientLevel world = client.level;
 
         // Breathing state
         String breathingText = "visible breath: unknown";
         int breathingColor = 0xFFFFFFFF;
         if (world != null && client.player != null) {
-            boolean underwater = client.player.isSubmergedInWater();
+            boolean underwater = client.player.isUnderWater();
             if (underwater && cfg.underwaterEnabled) {
                 breathingText = "visible breath: bubbles";
                 breathingColor = 0xFF4EA3FF;
@@ -94,14 +93,14 @@ public final class DebugManager {
 
         // Interval information
         double baseInterval = BreathController.INSTANCE.getCurrentBaseIntervalSeconds(cfg);
-        if (world != null && client.player != null && client.player.isSubmergedInWater() && cfg.underwaterEnabled) {
+        if (world != null && client.player != null && client.player.isUnderWater() && cfg.underwaterEnabled) {
             baseInterval = Math.max(0.1, cfg.underwaterBaseIntervalSeconds);
         }
         builder.addLine(descriptorFor("interval"), new DebugLine(String.format(Locale.ROOT, "interval: %.1fs", baseInterval), 0xFFFFFFFF));
 
         double minInt;
         double maxInt;
-        if (world != null && client.player != null && client.player.isSubmergedInWater() && cfg.underwaterEnabled) {
+        if (world != null && client.player != null && client.player.isUnderWater() && cfg.underwaterEnabled) {
             double base = Math.max(0.1, cfg.underwaterBaseIntervalSeconds);
             double dev = Math.max(0.0, cfg.underwaterIntervalDeviationSeconds);
             minInt = Math.max(0.1, base - dev);
@@ -115,8 +114,8 @@ public final class DebugManager {
 
         // Temperature information only when in world
         if (world != null && client.player != null) {
-            BlockPos pos = client.player.getBlockPos();
-            float baseTemp = world.getBiome(pos).value().getTemperature();
+            BlockPos pos = client.player.blockPosition();
+            float baseTemp = world.getBiome(pos).value().getBaseTemperature();
             float effTemp = EnvModel.computeEffectiveTemperature(world, pos, cfg);
             int sea = world.getSeaLevel();
             int alt = pos.getY() - sea;
@@ -130,9 +129,9 @@ public final class DebugManager {
 
         // Breath condensation and time information
         if (world != null && client.player != null) {
-            long dayTime = world.getTimeOfDay() % 24000L;
+            long dayTime = world.getGameTime() % 24000L;
             boolean inWindow = EnvModel.isWithinDayWindow(dayTime, cfg.breathCondensationStartTick, cfg.breathCondensationEndTick);
-            float temp = EnvModel.computeEffectiveTemperature(world, client.player.getBlockPos(), cfg);
+            float temp = EnvModel.computeEffectiveTemperature(world, client.player.blockPosition(), cfg);
             boolean okTemp = temp > cfg.alwaysBreathTemperature && temp <= cfg.maxBreathCondensationTemperature;
             boolean seasonCondensationEnabled = SeasonManager.isBreathCondensationEnabled(cfg.breathCondensationEnabled);
             boolean condensationActive = seasonCondensationEnabled && inWindow && okTemp;
@@ -147,7 +146,7 @@ public final class DebugManager {
         String dimText = "dim: unknown";
         if (world != null) {
             EnvModel.DimensionKind kind = EnvModel.getDimensionKind(world);
-            dimText = "dim: " + kind.name().toLowerCase(Locale.ROOT) + " (" + world.getRegistryKey().getValue() + ")";
+            dimText = "dim: " + kind.name().toLowerCase(Locale.ROOT) + " (" + world.dimension().identifier() + ")";
         }
         builder.addLine(descriptorFor("dimension"), new DebugLine(dimText, 0xFFFFFFFF));
 
@@ -159,8 +158,7 @@ public final class DebugManager {
         String seasonModDisplay = SeasonManager.getCurrentMod() == SeasonDetector.SeasonMod.VANILLA ? "none" : SeasonDetector.getDisplayName();
         builder.addLine(descriptorFor("season_mod"), new DebugLine("season mod: " + seasonModDisplay, 0xFFFFFFFF));
 
-        // Version checker details
-        builder.addLine(descriptorFor("version"), new DebugLine("version: " + VersionChecker.getLastUsedConstructor(), 0xFFFFFFFF));
+        builder.addLine(descriptorFor("version"), new DebugLine("particle: DustParticleOptions(int rgb, float scale)", 0xFFFFFFFF));
 
         return builder.isEmpty() ? DebugSnapshot.empty() : builder.build();
     }

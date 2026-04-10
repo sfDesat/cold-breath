@@ -1,8 +1,8 @@
 package com.sfdesat.coldbreath.season;
 
 import com.sfdesat.coldbreath.season.SeasonDetector.SeasonMod;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.world.World;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.world.level.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -20,27 +20,27 @@ public final class SereneInput {
 
     private SereneInput() {}
 
-    public static SeasonSnapshot sample(ClientWorld world, SeasonMod mod) {
-        if (world == null) {
+    public static SeasonSnapshot sample(ClientLevel level, SeasonMod mod) {
+        if (level == null) {
             return SeasonSnapshot.empty(mod);
         }
 
         if (mod == SeasonMod.SERENE_SEASONS) {
-            SeasonSnapshot real = SereneBridge.INSTANCE.sample(world);
+            SeasonSnapshot real = SereneBridge.INSTANCE.sample(level);
             if (real != null) {
                 return real;
             }
         }
 
-        return placeholder(world, mod);
+        return placeholder(level, mod);
     }
 
-    private static SeasonSnapshot placeholder(ClientWorld world, SeasonMod mod) {
+    private static SeasonSnapshot placeholder(ClientLevel level, SeasonMod mod) {
         if (mod == SeasonMod.VANILLA) {
             return SeasonSnapshot.empty(mod);
         }
 
-        long days = world.getTimeOfDay() / 24000L;
+        long days = level.getGameTime() / 24000L;
         int index = (int) Math.floorMod(days, SeasonPhase.orderedValues().length);
         SeasonPhase phase = SeasonPhase.fromOrdinal(index);
         return new SeasonSnapshot(mod, phase, 0.0D, 0, 0);
@@ -82,7 +82,7 @@ public final class SereneInput {
 
                 MethodHandles.Lookup lookup = MethodHandles.publicLookup();
                 seasonState = lookup.findStatic(helper, "getSeasonState",
-                        MethodType.methodType(state, World.class));
+                        MethodType.methodType(state, Level.class));
                 subSeason = lookup.findVirtual(state, "getSubSeason",
                         MethodType.methodType(subSeasonType));
                 day = lookup.findVirtual(state, "getDay", MethodType.methodType(int.class));
@@ -100,7 +100,7 @@ public final class SereneInput {
             this.loggedUnavailable = !ok;
         }
 
-        private SeasonSnapshot sample(ClientWorld world) {
+        private SeasonSnapshot sample(ClientLevel level) {
             if (!available) {
                 if (!loggedUnavailable) {
                     LOGGER.warn("Serene Seasons API unavailable; using placeholder seasons");
@@ -109,7 +109,7 @@ public final class SereneInput {
                 return null;
             }
             try {
-                Object state = getSeasonState.invoke(world);
+                Object state = getSeasonState.invoke(level);
                 if (state == null) return null;
 
                 Object subSeasonObj = getSubSeason.invoke(state);
@@ -138,5 +138,3 @@ public final class SereneInput {
         }
     }
 }
-
-

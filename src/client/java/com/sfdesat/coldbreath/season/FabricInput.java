@@ -1,7 +1,8 @@
 package com.sfdesat.coldbreath.season;
 
 import com.sfdesat.coldbreath.season.SeasonDetector.SeasonMod;
-import net.minecraft.client.world.ClientWorld;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.world.level.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -19,13 +20,13 @@ public final class FabricInput {
 
     private FabricInput() {}
 
-    public static SereneInput.SeasonSnapshot sample(ClientWorld world, SeasonMod mod) {
-        if (world == null || mod != SeasonMod.FABRIC_SEASONS) {
+    public static SereneInput.SeasonSnapshot sample(ClientLevel level, SeasonMod mod) {
+        if (level == null || mod != SeasonMod.FABRIC_SEASONS) {
             return SereneInput.SeasonSnapshot.empty(mod);
         }
 
         FabricBridge bridge = FabricBridge.INSTANCE;
-        SereneInput.SeasonSnapshot snapshot = bridge.sample(world);
+        SereneInput.SeasonSnapshot snapshot = bridge.sample(level);
         return snapshot != null ? snapshot : SereneInput.SeasonSnapshot.empty(mod);
     }
 
@@ -48,7 +49,7 @@ public final class FabricInput {
 
                 MethodHandles.Lookup lookup = MethodHandles.publicLookup();
                 seasonMethod = lookup.findStatic(fabricSeasons, "getCurrentSeason",
-                        MethodType.methodType(seasonEnum, net.minecraft.world.World.class));
+                        MethodType.methodType(seasonEnum, Level.class));
                 tempMethod = lookup.findVirtual(seasonEnum, "getTemperature",
                         MethodType.methodType(int.class));
                 ok = true;
@@ -62,7 +63,7 @@ public final class FabricInput {
             this.loggedUnavailable = !ok;
         }
 
-        private SereneInput.SeasonSnapshot sample(ClientWorld world) {
+        private SereneInput.SeasonSnapshot sample(ClientLevel level) {
             if (!available) {
                 if (!loggedUnavailable) {
                     LOGGER.warn("Fabric Seasons API unavailable; using placeholder seasons");
@@ -71,7 +72,7 @@ public final class FabricInput {
                 return null;
             }
             try {
-                Object seasonObj = getCurrentSeason.invoke(world);
+                Object seasonObj = getCurrentSeason.invoke(level);
                 if (seasonObj == null) return null;
 
                 String seasonName = seasonObj instanceof Enum<?> enumValue
