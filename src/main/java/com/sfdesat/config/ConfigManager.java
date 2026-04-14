@@ -18,7 +18,12 @@ public final class ConfigManager {
 
 	public static ColdBreathConfig get() {
 		if (cached == null) {
+			Path path = getConfigPath();
+			boolean fileMissing = !Files.isRegularFile(path);
 			cached = load();
+			if (fileMissing) {
+				save();
+			}
 		}
 		return cached;
 	}
